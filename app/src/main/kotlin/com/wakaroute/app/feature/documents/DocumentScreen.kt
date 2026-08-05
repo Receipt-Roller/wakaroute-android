@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.wakaroute.app.ui.design.DocumentBlockView
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.app.ui.theme.WakaRouteTheme
 import com.wakaroute.core.documents.BundledDocument
@@ -101,53 +102,6 @@ private fun PhaseOneNotice() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(14.dp),
         )
-    }
-}
-
-@Composable
-private fun DocumentBlockView(block: DocumentBlock) {
-    when (block) {
-        is DocumentBlock.Title -> Text(
-            text = block.spans.annotated(),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-        )
-
-        is DocumentBlock.Heading -> Text(
-            text = block.spans.annotated(),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-
-        is DocumentBlock.Paragraph -> Text(
-            text = block.spans.annotated(),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-
-        is DocumentBlock.BulletList -> Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            for (item in block.items) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // A literal bullet, not a drawn dot. TalkBack skips a
-                    // decorative shape and the student loses the list structure.
-                    Text("・", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = item.annotated(), style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-        }
-    }
-}
-
-/** Keeps the authored emphasis, which in these documents carries meaning. */
-private fun List<InlineSpan>.annotated() = buildAnnotatedString {
-    for (span in this@annotated) {
-        if (span.strong) {
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(span.text) }
-        } else {
-            append(span.text)
-        }
     }
 }
 
