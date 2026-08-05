@@ -31,10 +31,23 @@ data class AppEnvironment(
         val Production = AppEnvironment(
             wakarouteBaseUrl = "https://wakaroute.com",
             manabu2BaseUrl = "https://api.manabu2.com",
-            // The 実装ガイド documents `wakaroute-app` while the iOS client
-            // sends `wakaroute`. Phase 1 calls no authenticated endpoint, so
-            // nothing here depends on it yet — but Phase 2 must not guess.
-            // Raised as an AB question rather than settled by picking one.
+            // Shared with iOS, deliberately. The 実装ガイド says `wakaroute-app`,
+            // but `wakaroute` is the registration that actually exists and works:
+            // device registration was enabled on it (LMS-DEV t-d1bea66) and its
+            // OwnerOrganizationId is set (t-d1bea73). The guide's spelling is a
+            // documentation error, not a second client.
+            //
+            // One client for both platforms costs an independent kill switch —
+            // registration is permitted per client, so Android cannot be
+            // disabled without disabling iOS. Accepted knowingly: `platform` is
+            // already sent on every registration, the scopes are identical, and
+            // a second client would need the same two server-side fixes that
+            // once blocked this project outright.
+            //
+            // **Do not change this value once accounts exist.** It is not known
+            // whether MANABU2 keys a learner by `deviceId` alone or by
+            // `(clientId, deviceId)`. If it is the pair, changing it orphans
+            // every Android student's records — three years of them.
             clientId = "wakaroute",
             organizationId = "a461577a-3410-4c98-b1d5-db729f3444a1",
             keystoreService = "com.wakaroute.app",
