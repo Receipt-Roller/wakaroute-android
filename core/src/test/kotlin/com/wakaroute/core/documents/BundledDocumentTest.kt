@@ -77,10 +77,16 @@ class BundledDocumentTest {
         }
     }
 
+    /** Everything a reader would see, so a search cannot miss a block type. */
     private fun DocumentBlock.text(): String = when (this) {
         is DocumentBlock.Title -> spans.plainText
         is DocumentBlock.Heading -> spans.plainText
         is DocumentBlock.Paragraph -> spans.plainText
         is DocumentBlock.BulletList -> items.joinToString("\n") { it.plainText }
+        is DocumentBlock.NumberedList -> items.joinToString("\n") { it.plainText }
+        is DocumentBlock.Table ->
+            (listOf(header) + rows).joinToString("\n") { row -> row.joinToString("\t") { it.plainText } }
+        is DocumentBlock.Collapsible -> (summary.plainText + "\n" + body.joinToString("\n") { it.text() })
+        is DocumentBlock.Figure -> listOfNotNull(title, description).joinToString("\n")
     }
 }
