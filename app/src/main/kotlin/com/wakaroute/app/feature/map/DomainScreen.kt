@@ -32,20 +32,20 @@ import com.wakaroute.core.map.LearningElement
 import com.wakaroute.core.map.MasteryLevel
 import com.wakaroute.core.map.SchoolSubject
 import com.wakaroute.core.map.SubjectMapState
-import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.app.data.UnderstandingMapState
 
 /** The 要素 inside one 領域, in the order they are normally taught. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DomainScreen(
-    repository: UnderstandingMapRepository,
+    mapState: UnderstandingMapState,
     subjectName: String,
     domainCode: String,
     onOpenElement: (SchoolSubject, String, String) -> Unit,
     onBack: () -> Unit,
 ) {
     val subject = remember(subjectName) { subjectNamed(subjectName) }
-    val state = remember(subject) { subject?.let(repository::state) }
+    val state = remember(subject) { subject?.let(mapState::state) }
     val available = state as? SubjectMapState.Available
     val domain = available?.subject?.domain(domainCode)
 
@@ -90,7 +90,7 @@ fun DomainScreen(
                 ReadableColumn(spacing = 0.dp) {
                     ElementRow(
                         element = element,
-                        level = available.mastery[element.id],
+                        level = available.progress.recordOrEmpty[element.id],
                         onClick = { onOpenElement(subject, domain.code, element.id.value) },
                     )
                     HorizontalDivider()

@@ -154,14 +154,14 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
 
     composable(Routes.MAP) {
         UnderstandingMapScreen(
-            repository = services.understandingMap,
+            mapState = services.understandingMap,
             onOpenDomain = { subject, domain -> navController.navigate(Routes.domain(subject, domain)) },
         )
     }
 
     composable(Routes.DOMAIN) { entry ->
         DomainScreen(
-            repository = services.understandingMap,
+            mapState = services.understandingMap,
             subjectName = entry.arguments?.getString("subject").orEmpty(),
             domainCode = entry.arguments?.getString("domain").orEmpty(),
             onOpenElement = { subject, domain, element ->
@@ -173,7 +173,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
 
     composable(Routes.ELEMENT) { entry ->
         ElementScreen(
-            repository = services.understandingMap,
+            mapState = services.understandingMap,
             subjectName = entry.arguments?.getString("subject").orEmpty(),
             domainCode = entry.arguments?.getString("domain").orEmpty(),
             elementId = entry.arguments?.getString("element").orEmpty(),

@@ -41,13 +41,15 @@ class UnderstandingMapRepositoryTest {
     }
 
     @Test
-    fun `phase 1 reports an empty record rather than inventing progress`() {
+    fun `the bundled repository says it has no record, rather than reporting an empty one`() {
         val state = repository.state(SchoolSubject.Math) as SubjectMapState.Available
 
-        // Phase 1 talks to no MANABU2 endpoint. Anything other than empty here
-        // would be progress the app made up.
-        assertTrue(state.mastery.isEmpty)
-        assertTrue(state.subject.elements.all { state.mastery[it.id] == MasteryLevel.NotStarted })
+        // Structure only. `NotConnected` is a statement about the app; an empty
+        // MasteryRecord would be a statement about the student, and they are
+        // not the same claim.
+        assertEquals(LearnerProgress.NotConnected, state.progress)
+        assertTrue(state.progress.recordOrEmpty.isEmpty)
+        assertTrue(state.subject.elements.all { state.progress.recordOrEmpty[it.id] == MasteryLevel.NotStarted })
     }
 
     @Test

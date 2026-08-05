@@ -3,13 +3,15 @@ package com.wakaroute.app
 import android.app.Application
 import com.wakaroute.app.data.KeystoreSecretStore
 import com.wakaroute.app.data.TargetSchoolsState
+import com.wakaroute.app.data.UnderstandingMapState
 import com.wakaroute.core.auth.AuthSession
 import com.wakaroute.core.auth.DeviceAuthClient
 import com.wakaroute.core.auth.StoredDeviceIdProvider
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.goals.HttpTargetSchoolsRepository
 import com.wakaroute.core.map.BundledUnderstandingMapRepository
-import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.core.map.LiveUnderstandingMap
+import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.net.AuthenticatedHttpClient
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.OkHttpHttpClient
@@ -40,7 +42,7 @@ class WakaRouteApplication : Application() {
 class AppServices(
     val environment: AppEnvironment,
     val schools: SchoolsRepository,
-    val understandingMap: UnderstandingMapRepository,
+    val understandingMap: UnderstandingMapState,
     val preferences: AppPreferences,
     /**
      * Phase 2's foundation, assembled but **not yet used by any screen**.
@@ -80,7 +82,14 @@ class AppServices(
                 // authored graph and an empty record. See
                 // BundledUnderstandingMapRepository for why that is stated
                 // rather than filled in.
-                understandingMap = BundledUnderstandingMapRepository(),
+                understandingMap = run {
+                    val bundled = BundledUnderstandingMapRepository()
+                    UnderstandingMapState(
+                        bundled = bundled,
+                        live = LiveUnderstandingMap(ContentClient(authenticated, environment), bundled),
+                        isRegistered = auth::isRegistered,
+                    )
+                },
                 preferences = AppPreferences(application),
                 auth = auth,
                 authenticatedHttp = authenticated,

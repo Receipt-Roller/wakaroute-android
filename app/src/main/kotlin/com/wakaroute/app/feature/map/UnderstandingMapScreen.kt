@@ -17,6 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -27,9 +30,10 @@ import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.app.ui.design.StandingChip
 import com.wakaroute.core.map.DomainProgress
+import com.wakaroute.core.map.LearnerProgress
 import com.wakaroute.core.map.SchoolSubject
 import com.wakaroute.core.map.SubjectMapState
-import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.app.data.UnderstandingMapState
 import com.wakaroute.core.map.domainProgress
 
 /**
@@ -42,10 +46,15 @@ import com.wakaroute.core.map.domainProgress
  */
 @Composable
 fun UnderstandingMapScreen(
-    repository: UnderstandingMapRepository,
+    mapState: UnderstandingMapState,
     onOpenDomain: (SchoolSubject, String) -> Unit,
 ) {
-    val states = remember { repository.allStates() }
+    val states by mapState.states.collectAsStateWithLifecycle()
+
+    // Structure first, the student's record after. Only if this device already
+    // has an account — the first authenticated call is what creates a MANABU2
+    // learner, and opening a map must not do that.
+    LaunchedEffect(Unit) { mapState.refreshIfRegistered() }
 
     Column(
         modifier = Modifier
@@ -67,18 +76,57 @@ fun UnderstandingMapScreen(
                 SubjectCard(subject, state, onOpenDomain)
             }
 
-            // Phase 1 talks to no learning API, so nothing here reflects the
-            // student. Said once, at the bottom, rather than repeated beside
-            // every 要素.
-            Text(
-                text = "いまは項目とつながりだけを表示しています。" +
-                    "あなたの学習の記録にあわせた表示は準備中です。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
-            )
+            // Said once, at the bottom, rather than beside every 要素 — and it
+            // has to say **which** of the three situations this is. All three
+            // leave everything at まだ, and only one of them is about the
+            // student.
+            ProgressNote(states)
         }
     }
+}
+
+/**
+ * Whose fact the empty map is.
+ *
+ * 「まだ」 against every 要素 can mean three different things, and a student
+ * cannot tell them apart from the rows alone:
+ *
+ * - no account yet — nothing has been recorded anywhere
+ * - the record could not be read — it exists, we failed
+ * - the record is real and they have not started
+ *
+ * Only the third is about them. Drawing the first two as an ordinary empty
+ * record would tell a student they have done nothing, which for the first two
+ * is not something the app is in a position to claim.
+ */
+@Composable
+private fun ProgressNote(states: List<Pair<SchoolSubject, SubjectMapState>>) {
+    val progress = states
+        .mapNotNull { (_, state) -> (state as? SubjectMapState.Available)?.progress }
+        .firstOrNull()
+        ?: return
+
+    val message = when (progress) {
+        LearnerProgress.NotConnected ->
+            "いまは項目とつながりだけを表示しています。学習の記録が始まると、ここに反映されます。"
+
+        LearnerProgress.Unavailable ->
+            "学習の記録をいま読み込めませんでした。項目とつながりだけを表示しています。"
+
+        is LearnerProgress.Known ->
+            if (progress.record.isEmpty) {
+                "まだ学習の記録はありません。項目を開くと、何が何の前提になっているかを見られます。"
+            } else {
+                "あなたの学習の記録にあわせて表示しています。"
+            }
+    }
+
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
+    )
 }
 
 @Composable
@@ -106,7 +154,7 @@ private fun SubjectCard(
 
             when (state) {
                 is SubjectMapState.Available -> {
-                    val progress = state.subject.domainProgress(state.mastery)
+                    val progress = state.subject.domainProgress(state.progress.recordOrEmpty)
 
                     for (domain in progress) {
                         HorizontalDivider()

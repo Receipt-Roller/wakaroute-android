@@ -28,7 +28,7 @@ import com.wakaroute.core.map.ElementId
 import com.wakaroute.core.map.LearningElement
 import com.wakaroute.core.map.MasteryLevel
 import com.wakaroute.core.map.SubjectMapState
-import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.app.data.UnderstandingMapState
 import com.wakaroute.core.map.isMeasurable
 import java.net.URLDecoder
 
@@ -43,14 +43,14 @@ import java.net.URLDecoder
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ElementScreen(
-    repository: UnderstandingMapRepository,
+    mapState: UnderstandingMapState,
     subjectName: String,
     domainCode: String,
     elementId: String,
     onBack: () -> Unit,
 ) {
     val subject = remember(subjectName) { subjectNamed(subjectName) }
-    val state = remember(subject) { subject?.let(repository::state) }
+    val state = remember(subject) { subject?.let(mapState::state) }
     val available = state as? SubjectMapState.Available
 
     val decodedId = remember(elementId) { ElementId(URLDecoder.decode(elementId, "UTF-8")) }
@@ -93,7 +93,7 @@ fun ElementScreen(
                     )
                 }
 
-                MasteryScale(current = available.mastery[element.id])
+                MasteryScale(current = available.progress.recordOrEmpty[element.id])
 
                 ElementList(
                     heading = "この項目の前提",
