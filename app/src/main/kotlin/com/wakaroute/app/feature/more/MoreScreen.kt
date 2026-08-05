@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ReadableColumn
@@ -108,6 +110,7 @@ private fun DocumentRow(title: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = title }
             // 48dp keeps the target reachable at any text size; the row grows
             // beyond it when the label wraps.
             .padding(vertical = 14.dp),

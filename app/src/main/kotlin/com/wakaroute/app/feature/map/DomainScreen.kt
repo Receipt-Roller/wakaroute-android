@@ -23,6 +23,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ReadableColumn
@@ -100,10 +102,21 @@ fun DomainScreen(
 
 @Composable
 private fun ElementRow(element: LearningElement, level: MasteryLevel, onClick: () -> Unit) {
+    // One sentence, for the same reason as DomainRow: a clickable row with no
+    // semantics of its own announces nothing, and the pieces below would be
+    // read as three unrelated fragments.
+    val announcement = buildString {
+        append(element.name)
+        element.grade?.let { append("、中$it") }
+        append("、${level.label}")
+        if (element.prerequisiteIds.isNotEmpty()) append("、前提${element.prerequisiteIds.size}項目")
+    }
+
     AdaptiveRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = announcement }
             .padding(vertical = 14.dp),
     ) { flexible ->
         Column(

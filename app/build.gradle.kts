@@ -21,6 +21,8 @@ android {
 
         versionCode = 1
         versionName = "0.1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -98,4 +100,14 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Instrumented, because the merged semantics tree — the one TalkBack
+    // actually reads — only exists on a device. `uiautomator dump` renders
+    // Compose hierarchies in a way that looks like every row is unlabelled,
+    // including Material's own navigation bar, so it cannot be used to judge
+    // this.
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

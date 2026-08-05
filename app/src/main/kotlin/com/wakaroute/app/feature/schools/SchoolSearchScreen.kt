@@ -36,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -248,10 +250,20 @@ private fun Results(
 
 @Composable
 private fun SchoolRow(school: School, onClick: () -> Unit) {
+    // Name first, then where and what kind — the order a student scanning a
+    // list of 4,903 schools needs it in.
+    val announcement = listOfNotNull(
+        school.name,
+        school.prefecture,
+        school.ownershipDisplay,
+        school.campusTypeLabel,
+    ).joinToString("、")
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = announcement }
             .padding(vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

@@ -19,8 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ComingSoonChip
@@ -142,10 +142,23 @@ private fun SubjectCard(
 
 @Composable
 private fun DomainRow(progress: DomainProgress, onClick: () -> Unit) {
+    // Spoken as one sentence.
+    //
+    // Without this the row announces nothing at all: `clickable` alone leaves
+    // the tappable node empty and scatters the label, the count and the standing
+    // across separate children, so a TalkBack user hears silence on the one
+    // thing they can act on. Verified against the accessibility node tree, not
+    // assumed — the screen looks correct either way.
+    //
+    // The 領域 letter is deliberately absent. It is a label on the web map, and
+    // spelling out 「エー」 before every 領域 is noise.
+    val announcement = "${progress.domain.name}、${progress.totalElements}項目、${progress.standing.label}"
+
     AdaptiveRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = announcement }
             .padding(vertical = 12.dp),
     ) { flexible ->
         Column(
@@ -153,13 +166,8 @@ private fun DomainRow(progress: DomainProgress, onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                // The letter is a label on the web map, not information a
-                // screen reader needs to spell out.
                 text = "${progress.domain.code}　${progress.domain.name}",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.clearAndSetSemantics {
-                    contentDescription = progress.domain.name
-                },
             )
             Text(
                 text = "${progress.totalElements}項目",
