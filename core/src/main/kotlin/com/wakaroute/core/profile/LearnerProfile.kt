@@ -8,20 +8,21 @@ import com.wakaroute.core.net.sendDecoding
 import kotlinx.serialization.Serializable
 
 /**
- * The signed-in learner — **four fields, and no more**.
+ * The signed-in learner — **three fields, and no more**.
  *
- * `GET /api/v1/me` returns far more than this. Verified against production on
- * 2026-08-05, a plain learner token also receives an `organizations` array
- * carrying the organisation's **entire member list** (35 people on our own
- * tenant), each entry with `userId`, `title`, `hourlyRate`, role flags and an
- * `invitationToken` — plus the organisation's `subscriptionPlan`, `seatCount`
- * and `companyOverview`. This is LMS-DEV t-d1bea74, and it is worse than that
- * ticket describes.
+ * `GET /api/v1/me` used to return the organisation's entire member list to any
+ * learner token, each entry carrying `hourlyRate` and a **usable**
+ * `invitationToken` (LMS-DEV t-d1bea74). That is fixed and deployed; verified
+ * against production on 2026-08-05 — `members` is gone, the organisation's
+ * contract data is gone, and `/organizations/{id}/members` answers a learner
+ * token with 403.
  *
- * Nothing here can fix that. What it can do is refuse to participate: the
- * response is decoded into this type, `organizations` is never declared, and so
- * other people's identifiers never enter the app's memory, its caches, or a
- * crash report — of which there are none, but the principle holds.
+ * This class stays minimal anyway, for a reason the backend team gave
+ * themselves when they chose a fixed response over a scope-branched one: a
+ * response that varies is one where **the next field somebody adds to the
+ * domain DTO ships silently**. `user` is still that domain DTO — 16 fields on
+ * production today, all of them about the caller, none of them ours to want.
+ * Declaring three means a seventeenth cannot arrive here by accident.
  *
  * **Do not add fields to this class from the `/me` response without asking why
  * a 中学生's app needs them.**

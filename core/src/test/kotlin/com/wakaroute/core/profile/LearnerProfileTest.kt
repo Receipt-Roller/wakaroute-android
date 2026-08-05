@@ -11,14 +11,27 @@ import org.junit.Test
 class LearnerProfileTest {
 
     @Test
-    fun `only the learner's own four fields survive decoding`() = runTest {
-        // The real response also carries the organisation's entire member list.
-        // Nothing here can stop the server sending it (LMS-DEV t-d1bea74); what
-        // this proves is that it does not enter the app.
-        val profile = client(ME_WITH_ORGANISATION).profile()
+    fun `the current production shape decodes`() = runTest {
+        // Field-for-field the real response as of 2026-08-05, after the fix for
+        // LMS-DEV t-d1bea74. Note `displayName` arrives as **null**, not "" —
+        // an unlinked account has never been given one.
+        val profile = client(ME_AFTER_FIX).profile()
 
         assertEquals("TEST-USER-0001", profile.id)
         assertEquals("", profile.email)
+        assertEquals("", profile.displayName)
+        assertFalse(profile.isLinked)
+    }
+
+    @Test
+    fun `the pre-fix shape would still not have leaked into the app`() = runTest {
+        // Kept after the server was fixed. It is the regression test for the
+        // client's half of that incident: if `organizations` is ever declared
+        // here, this stops proving anything and the next server-side mistake
+        // reaches a student's phone unopposed.
+        val profile = client(ME_WITH_ORGANISATION).profile()
+
+        assertEquals("TEST-USER-0001", profile.id)
         assertFalse(profile.isLinked)
     }
 
@@ -50,6 +63,25 @@ class LearnerProfileTest {
     """.trimIndent()
 
     private companion object {
+        /** The response as production returns it today. Ids invented. */
+        const val ME_AFTER_FIX = """
+        {
+          "user": {
+            "id": "TEST-USER-0001", "email": "", "displayName": null,
+            "profileImageUrl": "/images/default-avatar.png", "preferredCulture": "ja-JP",
+            "organizationId": null, "department": null,
+            "completedLessons": 0, "completedProjects": 0, "lastAccessedAt": null,
+            "isDeactivated": false, "isConsultant": false, "consultantTenantCount": 0,
+            "isRagManager": false, "canCreateAgents": false
+          },
+          "organizations": [
+            { "id": "TEST-ORG-0001", "name": "テスト組織",
+              "isOrgAdmin": false, "isCurriculumManager": false, "isHr": false,
+              "isExecutive": false, "isDeveloper": false, "isLearner": true }
+          ]
+        }
+        """
+
         /**
          * Reduced from a real response. The member entries are invented — the
          * production body contained 35 real people, and §11 forbids committing
