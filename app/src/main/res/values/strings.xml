@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      表示名は「ワカルート」。開発ガイド §13 で決まっており、ストア掲載名と
+      そろえる必要があります。
+    -->
+    <string name="app_name">ワカルート</string>
+</resources>

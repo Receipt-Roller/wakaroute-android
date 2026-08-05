@@ -1,0 +1,63 @@
+WakaRoute Android
+Copyright 2026 RECEIPTROLLER Inc.
+
+This product includes data derived from the school-code CSV files published by
+the Ministry of Education, Culture, Sports, Science and Technology of Japan
+(MEXT).
+
+Source:
+https://www.mext.go.jp/b_menu/toukei/mext_01087.html
+
+Source dataset used by the current generated catalog: May 1, 2025 (final
+version).
+
+Attribution and modification notice:
+"MEXT School Codes" (Ministry of Education, Culture, Sports, Science and
+Technology of Japan) has been filtered to high-school codes, normalized,
+assigned stable WakaRoute identifiers, and supplemented by RECEIPTROLLER Inc.
+
+The MEXT website terms conform to the Government Standard Terms of Use
+(Version 2.0) and are compatible with Creative Commons Attribution 4.0
+International. Reusers must preserve the source attribution and clearly state
+when they edit or process the source-derived data. WakaRoute is not endorsed
+by MEXT.
+
+MEXT website terms:
+https://www.mext.go.jp/b_menu/1351168.htm
+
+School profiles, decision guides, admissions, and exam schedules may cite
+official school or education-board pages in per-record `sources` fields.
+WakaRoute-authored summaries and structured annotations are original
+paraphrases and do not copy the cited pages' photographs, logos, or full text.
+Rights in content on cited third-party pages remain with their respective
+owners. A source URL in this repository does not grant permission to reuse the
+source page itself.
+
+The Apache License 2.0 applies to WakaRoute-authored software, schemas,
+documentation, summaries, and annotations, except where a file or item states
+otherwise. It does not replace terms that independently apply to source
+material or third-party content.
+
+The high school information shown in this app is retrieved at runtime from
+wakaroute.com and originates from the dataset described above. This client does
+not bundle a copy of it.
+
+The prerequisite graph bundled at core/src/main/resources/graphs/ is authored by
+RECEIPTROLLER Inc. It references MANABU2 course identifiers and is a draft
+following the sequence of the Japanese lower-secondary curriculum guidelines for
+mathematics; it is not a reproduction of those guidelines.
+
+The documents bundled at core/src/main/resources/documents/ are authored by
+RECEIPTROLLER Inc. and are kept identical in substance to the versions published
+on wakaroute.com.
+
+Third-party libraries retain their respective licenses:
+
+  Kotlin, kotlinx.coroutines, kotlinx.serialization
+    Copyright 2010-2024 JetBrains s.r.o. and contributors — Apache License 2.0
+
+  AndroidX (Core, Activity, Compose, Lifecycle, Navigation, DataStore)
+    Copyright The Android Open Source Project — Apache License 2.0
+
+  OkHttp
+    Copyright Square, Inc. — Apache License 2.0

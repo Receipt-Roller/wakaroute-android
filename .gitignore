@@ -1,0 +1,24 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing material. The repository is public; a keystore or its password in
+# history cannot be taken back by deleting the file in a later commit.
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+google-services.json
+
+# Environment overrides, which is where a real endpoint or token would land.
+secrets.properties
+*.env
+
+# Claude Code のローカル権限設定。開発者ごとに違うもので、共有する意味がありません。
+.claude/

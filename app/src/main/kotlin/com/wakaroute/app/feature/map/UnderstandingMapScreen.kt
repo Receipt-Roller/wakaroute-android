@@ -1,0 +1,179 @@
+package com.wakaroute.app.feature.map
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.dp
+import com.wakaroute.app.ui.design.AdaptiveRow
+import com.wakaroute.app.ui.design.ComingSoonChip
+import com.wakaroute.app.ui.design.ReadableColumn
+import com.wakaroute.app.ui.design.StandingChip
+import com.wakaroute.core.map.DomainProgress
+import com.wakaroute.core.map.SchoolSubject
+import com.wakaroute.core.map.SubjectMapState
+import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.core.map.domainProgress
+
+/**
+ * The 理解マップ, one card per 教科.
+ *
+ * All five appear. Four of them have no authored prerequisite edges, and they
+ * say 準備中 rather than being hidden or — far worse — handed an empty graph. On
+ * an empty graph every 要素 is `Ready`, and this screen would cheerfully report
+ * 「つまずきはありません」 about four subjects nobody has mapped.
+ */
+@Composable
+fun UnderstandingMapScreen(
+    repository: UnderstandingMapRepository,
+    onOpenDomain: (SchoolSubject, String) -> Unit,
+) {
+    val states = remember { repository.allStates() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        ReadableColumn(spacing = 16.dp) {
+            Text(text = "理解マップ", style = MaterialTheme.typography.headlineSmall)
+
+            Text(
+                text = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            for ((subject, state) in states) {
+                SubjectCard(subject, state, onOpenDomain)
+            }
+
+            // Phase 1 talks to no learning API, so nothing here reflects the
+            // student. Said once, at the bottom, rather than repeated beside
+            // every 要素.
+            Text(
+                text = "いまは項目とつながりだけを表示しています。" +
+                    "あなたの学習の記録にあわせた表示は準備中です。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubjectCard(
+    subject: SchoolSubject,
+    state: SubjectMapState,
+    onOpenDomain: (SchoolSubject, String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            AdaptiveRow(modifier = Modifier.fillMaxWidth()) { flexible ->
+                Text(
+                    text = subject.label,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = flexible,
+                )
+                if (state !is SubjectMapState.Available) ComingSoonChip()
+            }
+
+            when (state) {
+                is SubjectMapState.Available -> {
+                    val progress = state.subject.domainProgress(state.mastery)
+
+                    for (domain in progress) {
+                        HorizontalDivider()
+                        DomainRow(domain) { onOpenDomain(subject, domain.domain.code) }
+                    }
+
+                    Text(
+                        text = "つながりの作成日: ${state.asOf}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                SubjectMapState.ComingSoon -> Text(
+                    text = "${subject.label}のつながりは、まだ作られていません。" +
+                        "できあがるまで表示しません。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                // Deliberately not a partial map. A broken graph sends students
+                // back to the wrong place, and no map is better than a wrong one.
+                is SubjectMapState.Unavailable -> Text(
+                    text = "${subject.label}のつながりを読み込めませんでした。" +
+                        "正しく直るまで表示しません。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DomainRow(progress: DomainProgress, onClick: () -> Unit) {
+    AdaptiveRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+    ) { flexible ->
+        Column(
+            modifier = flexible,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                // The letter is a label on the web map, not information a
+                // screen reader needs to spell out.
+                text = "${progress.domain.code}　${progress.domain.name}",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.clearAndSetSemantics {
+                    contentDescription = progress.domain.name
+                },
+            )
+            Text(
+                text = "${progress.totalElements}項目",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        StandingChip(progress.standing)
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing leaves the device.
+
+  Phase 2 stores a `deviceSecret` in the Keystore, and that credential must not
+  be copied to another device: a restored secret would let two installs claim
+  the same learner's three years of study records. Excluding everything now is
+  cheaper than remembering to exclude the secret when it is added.
+
+  What is lost by this is small — a search filter and a "has read the intro"
+  flag. What it prevents is not.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
