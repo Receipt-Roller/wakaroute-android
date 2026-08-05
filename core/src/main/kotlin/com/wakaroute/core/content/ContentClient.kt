@@ -108,6 +108,37 @@ class ContentClient(
     }
 
     /**
+     * Records a session that has already finished.
+     *
+     * Deliberately not `/study-sessions/start` and `/stop`. Driving the
+     * server's clock means the timer needs a connection to begin — and the
+     * student this feature is for is on a train. The session runs on the
+     * device and is posted whole, with a [RecordStudySession.clientSessionId]
+     * the server deduplicates replays on.
+     */
+    suspend fun recordStudySession(session: RecordStudySession): StudySession = http.sendDecoding(
+        postRequest(
+            path = "/api/v1/me/study-sessions",
+            body = WakaRouteJson.encodeToString(RecordStudySession.serializer(), session),
+            // Belt as well as braces: clientSessionId already dedupes, and this
+            // makes a resend cheap on the server rather than merely harmless.
+            headers = mapOf("Idempotency-Key" to session.clientSessionId),
+        ),
+        StudySession.serializer(),
+    )
+
+    /** Consecutive days studied — computed server-side, so it survives a new phone. */
+    suspend fun studyStreak(): StudyStreak = get("/api/v1/me/study-streak") { request ->
+        http.sendDecoding(request, StudyStreak.serializer())
+    }
+
+    /** A dense day-by-day series, zero days included. */
+    suspend fun studySummary(from: String, to: String): List<StudyDay> =
+        get("/api/v1/me/study-summary?from=$from&to=$to&granularity=day") { request ->
+            http.sendDecoding(request, ListSerializer(StudyDay.serializer()))
+        }
+
+    /**
      * `POST /api/v1/lessons/{id}/feedback` — 「わかった」/「むずかしかった」.
      *
      * `reasons` is omitted when [understood] is true, because the server

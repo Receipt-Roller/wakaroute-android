@@ -64,6 +64,31 @@ sealed interface PendingAction {
         override val mergeRule get() = MergeRule.Keep
     }
 
+    /**
+     * A finished stretch of study.
+     *
+     * [clientSessionId] is the server's deduplication key, minted when the
+     * timer stopped and never regenerated — the same rule as the quiz key. A
+     * fresh one on a resend counts the same twenty minutes twice, and a student
+     * looking at an inflated total has no way to tell it is wrong.
+     */
+    @Serializable
+    data class RecordStudy(
+        override val id: String,
+        override val lessonId: String,
+        override val createdAtEpochSeconds: Long,
+        val clientSessionId: String,
+        val startedAt: String,
+        val endedAt: String,
+        val durationSeconds: Int,
+        val subject: String? = null,
+        val courseId: String? = null,
+    ) : PendingAction {
+        // Two stretches of study are two stretches, exactly as two quiz
+        // sittings are two sittings.
+        override val mergeRule get() = MergeRule.Keep
+    }
+
     /** 「わかった」/「むずかしかった」 on a lesson. */
     @Serializable
     data class RateLesson(

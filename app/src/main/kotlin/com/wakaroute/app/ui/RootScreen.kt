@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -38,6 +39,7 @@ import com.wakaroute.app.feature.more.MoreScreen
 import com.wakaroute.app.feature.onboarding.IntroductionScreen
 import com.wakaroute.app.feature.schools.SchoolDetailScreen
 import com.wakaroute.app.feature.schools.SchoolSearchScreen
+import com.wakaroute.app.feature.study.StudyRecordScreen
 import com.wakaroute.core.documents.BundledDocument
 import com.wakaroute.core.map.SchoolSubject
 import kotlinx.coroutines.launch
@@ -54,6 +56,7 @@ import kotlinx.coroutines.launch
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     Home(Routes.HOME, "ホーム", Icons.Filled.Home),
     Map(Routes.MAP, "理解マップ", Icons.Outlined.AccountTree),
+    Record(Routes.RECORD, "記録", Icons.Filled.Timer),
     Schools(Routes.SCHOOLS, "高校を探す", Icons.Filled.School),
     More(Routes.MORE, "その他", Icons.Filled.MoreHoriz),
 }
@@ -62,6 +65,7 @@ object Routes {
     const val INTRODUCTION = "introduction"
     const val HOME = "home"
     const val MAP = "map"
+    const val RECORD = "record"
     const val SCHOOLS = "schools"
     const val MORE = "more"
     const val GOALS = "goals"
@@ -148,6 +152,9 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             onOpenMap = { navController.switchTab(Routes.MAP) },
             onOpenSchools = { navController.switchTab(Routes.SCHOOLS) },
             onOpenGoals = { navController.navigate(Routes.GOALS) },
+            onOpenElement = { subject, domain, element ->
+                navController.navigate(Routes.element(subject, domain, element))
+            },
             onOpenDocument = { navController.navigate(Routes.document(it)) },
         )
     }
@@ -208,6 +215,15 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             queue = services.actionQueue,
             lessonId = entry.arguments?.getString("lessonId").orEmpty(),
             onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.RECORD) {
+        StudyRecordScreen(
+            timer = services.studyTimer,
+            queue = services.actionQueue,
+            content = services.content,
+            isRegistered = services.auth::isRegistered,
         )
     }
 

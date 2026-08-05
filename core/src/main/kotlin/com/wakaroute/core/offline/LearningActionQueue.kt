@@ -101,6 +101,35 @@ class LearningActionQueue(
         store.write(store.read().filterNot { it.id == actionId })
     }
 
+    /**
+     * Records a stretch of study that has finished.
+     *
+     * Queued rather than sent directly, always. This is the record the 共通判断
+     * 規則 opens with — 「電車で勉強した生徒の記録を、通信状況で失わせない」 — and it is
+     * exactly the one most likely to be made with no signal.
+     */
+    suspend fun recordStudy(
+        clientSessionId: String,
+        startedAt: String,
+        endedAt: String,
+        durationSeconds: Int,
+        subject: String? = null,
+        courseId: String? = null,
+        lessonId: String = "",
+    ) = enqueue(
+        PendingAction.RecordStudy(
+            id = newId(),
+            lessonId = lessonId,
+            createdAtEpochSeconds = now(),
+            clientSessionId = clientSessionId,
+            startedAt = startedAt,
+            endedAt = endedAt,
+            durationSeconds = durationSeconds,
+            subject = subject,
+            courseId = courseId,
+        ),
+    )
+
     suspend fun rateLesson(
         lessonId: String,
         understood: Boolean,
@@ -190,6 +219,21 @@ class LearningActionQueue(
 
         is PendingAction.SubmitQuiz -> {
             content.submitQuiz(action.lessonId, action.answers, action.idempotencyKey)
+            Unit
+        }
+
+        is PendingAction.RecordStudy -> {
+            content.recordStudySession(
+                com.wakaroute.core.content.RecordStudySession(
+                    clientSessionId = action.clientSessionId,
+                    startedAt = action.startedAt,
+                    endedAt = action.endedAt,
+                    durationSeconds = action.durationSeconds,
+                    subject = action.subject,
+                    courseId = action.courseId,
+                    lessonId = action.lessonId.takeIf { it.isNotBlank() },
+                ),
+            )
             Unit
         }
 

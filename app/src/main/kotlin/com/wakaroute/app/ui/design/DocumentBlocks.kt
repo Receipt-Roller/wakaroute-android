@@ -112,6 +112,9 @@ private fun MarkedList(
  */
 @Composable
 private fun TableView(table: DocumentBlock.Table, modifier: Modifier) {
+    // if/else rather than an early `return`. Returning out of a composable
+    // after it has emitted corrupts Compose's slot table, and the crash
+    // surfaces inside the runtime with nothing pointing back at the culprit.
     if (isLargeFontScale() && table.header.isNotEmpty()) {
         Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             for (row in table.rows) {
@@ -130,26 +133,25 @@ private fun TableView(table: DocumentBlock.Table, modifier: Modifier) {
                 HorizontalDivider()
             }
         }
-        return
-    }
-
-    Column(
-        modifier = modifier
-            .horizontalScroll(rememberScrollState())
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
-    ) {
-        if (table.header.isNotEmpty()) {
-            Row(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
-                for (cell in table.header) {
-                    TableCell(cell, MaterialTheme.typography.labelLarge)
+    } else {
+        Column(
+            modifier = modifier
+                .horizontalScroll(rememberScrollState())
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
+        ) {
+            if (table.header.isNotEmpty()) {
+                Row(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    for (cell in table.header) {
+                        TableCell(cell, MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
-        }
-        for (row in table.rows) {
-            HorizontalDivider()
-            Row {
-                for (cell in row) {
-                    TableCell(cell, MaterialTheme.typography.bodyMedium)
+            for (row in table.rows) {
+                HorizontalDivider()
+                Row {
+                    for (cell in row) {
+                        TableCell(cell, MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
         }
@@ -253,9 +255,7 @@ private fun FigureView(figure: DocumentBlock.Figure, modifier: Modifier) {
                 description?.let {
                     Text(text = it, style = MaterialTheme.typography.bodyMedium, color = FIGURE_TEXT)
                 }
-                return@Column
-            }
-
+            } else {
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -278,6 +278,7 @@ private fun FigureView(figure: DocumentBlock.Figure, modifier: Modifier) {
             // left if the drawing ever stops rendering.
             description?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = FIGURE_LABEL)
+            }
             }
         }
     }

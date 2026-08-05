@@ -9,7 +9,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.wakaroute.app.feature.map.UnderstandingMapScreen
 import com.wakaroute.app.ui.theme.WakaRouteTheme
+import com.wakaroute.app.data.UnderstandingMapState
+import com.wakaroute.core.config.AppEnvironment
+import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.map.BundledUnderstandingMapRepository
+import com.wakaroute.core.map.LiveUnderstandingMap
+import com.wakaroute.core.net.HttpClient
+import com.wakaroute.core.net.HttpRequest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,14 +40,27 @@ class AccessibilityTest {
     val rule = createComposeRule()
 
     private fun setMapScreen() {
+        val bundled = BundledUnderstandingMapRepository()
+        val state = UnderstandingMapState(
+            bundled = bundled,
+            live = LiveUnderstandingMap(ContentClient(NoNetwork, AppEnvironment.Production), bundled),
+            // No account, so the bundled structure is what the screen shows and
+            // nothing reaches the network — which is also what a student sees
+            // before they have done anything.
+            isRegistered = { false },
+        )
+
         rule.setContent {
             WakaRouteTheme {
-                UnderstandingMapScreen(
-                    repository = BundledUnderstandingMapRepository(),
-                    onOpenDomain = { _, _ -> },
-                )
+                UnderstandingMapScreen(mapState = state, onOpenDomain = { _, _ -> })
             }
         }
+    }
+
+    /** Fails loudly if the screen ever tries to fetch. */
+    private object NoNetwork : HttpClient {
+        override suspend fun send(request: HttpRequest) =
+            throw AssertionError("the map must draw from the bundle: ${request.url}")
     }
 
     @Test

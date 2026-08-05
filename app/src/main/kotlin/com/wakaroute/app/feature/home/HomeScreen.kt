@@ -9,8 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.AccountTree
@@ -39,21 +41,22 @@ import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.core.documents.BundledDocument
 import com.wakaroute.core.map.SchoolSubject
+import com.wakaroute.core.map.HomeDigest
+import com.wakaroute.core.map.LearnerProgress
 import com.wakaroute.core.map.SubjectMapState
 
 /**
- * The Phase 1 home screen.
+ * ホーム — 志望校, 「つぎにやること」, and the way in to everything else.
  *
- * Not the iOS home screen. That one shows 志望校, today's study minutes, a
- * streak and 「つぎにやること」, all of which come from MANABU2 — which Phase 1
- * does not talk to. Porting it would mean drawing 0分 and 0日 as though they
- * were a student's record, and 「つぎにやること」 with no evidence behind it is
- * exactly the invented number 共通判断規則 §7 rules out.
+ * The rule this screen keeps is that **nothing appears until there is evidence
+ * for it**. 「つぎにやること」 is absent until the student has a record to reason
+ * from, because rows generated from an empty one would say 「ここから始めると」
+ * about the same three 要素 on every launch — guidance with nothing behind it,
+ * which §7 rules out as squarely as an invented number would be.
  *
- * So this screen offers what works, and says plainly what does not. The
- * distinction it has to keep is between **まだ記録がありません** (about the
- * student) and **準備中** (about the app) — only the second is true today, and
- * showing the first would blame a student for a feature nobody has built.
+ * The other distinction it has to keep is between **まだ記録がありません** (about
+ * the student) and **準備中** (about the app). Both leave the screen looking
+ * empty; only one of them is something the student did.
  */
 @Composable
 fun HomeScreen(
@@ -61,9 +64,13 @@ fun HomeScreen(
     onOpenMap: () -> Unit,
     onOpenSchools: () -> Unit,
     onOpenGoals: () -> Unit,
+    onOpenElement: (SchoolSubject, String, String) -> Unit,
     onOpenDocument: (BundledDocument) -> Unit,
 ) {
-    val mathState = remember { services.understandingMap.state(SchoolSubject.Math) }
+    val mapStates by services.understandingMap.states.collectAsStateWithLifecycle()
+    val mathState = mapStates.firstOrNull { it.first == SchoolSubject.Math }?.second
+
+    LaunchedEffect(Unit) { services.understandingMap.refreshIfRegistered() }
 
     Column(
         modifier = Modifier
@@ -75,6 +82,25 @@ fun HomeScreen(
         ReadableColumn(spacing = 16.dp) {
             TargetSchoolsSection(services, onOpenSchools, onOpenGoals)
 
+            // Only once there is a record to reason from. With an empty one
+            // every row would read 「ここから始めると」 for the same three 要素 on
+            // every launch, which is noise rather than guidance — and the map
+            // says the same thing better.
+            (mathState as? SubjectMapState.Available)
+                ?.takeIf { it.progress is LearnerProgress.Known && !it.progress.recordOrEmpty.isEmpty }
+                ?.let { available ->
+                    NextStepsSection(
+                        steps = HomeDigest.nextSteps(available.subject, available.progress.recordOrEmpty),
+                        onOpenElement = { step ->
+                            onOpenElement(
+                                SchoolSubject.Math,
+                                step.element.domainCode,
+                                step.element.id.value,
+                            )
+                        },
+                    )
+                }
+
             Text(
                 text = "いま使えること",
                 style = MaterialTheme.typography.headlineSmall,
@@ -84,6 +110,7 @@ fun HomeScreen(
                 icon = Icons.Outlined.AccountTree,
                 title = "理解マップ",
                 body = when (mathState) {
+                    null -> "準備中です。"
                     is SubjectMapState.Available ->
                         "数学の${mathState.subject.elements.size}項目と、その前提関係を見られます。" +
                             "ほかの4教科は準備中です。"
@@ -237,11 +264,13 @@ private fun TargetSchoolsCard(list: TargetSchoolList, onOpenGoals: () -> Unit) {
 }
 
 /**
- * What the finished app will do, listed honestly as 準備中.
+ * What is still not built.
  *
- * Kept on the home screen rather than hidden, because the alternative is a
- * student wondering whether they missed a button. Drawn without numbers of any
- * kind: a 0 beside 学習時間 reads as a record, not as an absence.
+ * Kept accurate rather than kept short. Every item removed from this list is a
+ * feature that now works — and an item left on it after it ships is worse than
+ * no list at all, because a student who reads 準備中 stops looking for it.
+ *
+ * レッスンとクイズ, 学習時間の記録 and 志望校の登録 have all left this list.
  */
 @Composable
 private fun PreparingSection() {
@@ -266,9 +295,9 @@ private fun PreparingSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PreparingRow(Icons.Filled.EditNote, "レッスンとクイズ")
-            PreparingRow(Icons.Filled.Timer, "学習時間の記録")
-            PreparingRow(Icons.Filled.Flag, "志望校の登録")
+            PreparingRow(Icons.Filled.PhoneAndroid, "機種変更のときの引き継ぎ")
+            PreparingRow(Icons.Filled.Notifications, "学習リマインダー")
+            PreparingRow(Icons.Filled.People, "保護者との連携")
         }
     }
 }

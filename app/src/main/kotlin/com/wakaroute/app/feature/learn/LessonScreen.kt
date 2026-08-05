@@ -164,6 +164,12 @@ fun LessonScreen(
                 }
 
                 item {
+                    // After the body and beside the completion button, never in
+                    // front of either. §6: it must not interrupt.
+                    ReadableColumn { LessonRatingCard(id, queue) }
+                }
+
+                item {
                     ReadableColumn {
                         CompleteButton(
                             completed = completed,
@@ -204,18 +210,17 @@ private fun CompleteButton(completed: Boolean, working: Boolean, onComplete: () 
             Icon(Icons.Filled.Check, contentDescription = null)
             Text("　読み終えました")
         }
-        return
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Button(onClick = onComplete, enabled = !working, modifier = Modifier.fillMaxWidth()) {
-            Text(if (working) "記録しています…" else "読み終えた")
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Button(onClick = onComplete, enabled = !working, modifier = Modifier.fillMaxWidth()) {
+                Text(if (working) "記録しています…" else "読み終えた")
+            }
+            Text(
+                text = "この項目のレッスンをすべて読み終えると、理解マップに反映されます。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Text(
-            text = "この項目のレッスンをすべて読み終えると、理解マップに反映されます。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

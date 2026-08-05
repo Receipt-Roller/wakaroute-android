@@ -194,17 +194,16 @@ private fun ElementList(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            return
-        }
+        } else {
+            Text(
+                text = caption,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-        Text(
-            text = caption,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        for (element in elements) {
-            Text(text = "・${element.name}", style = MaterialTheme.typography.bodyLarge)
+            for (element in elements) {
+                Text(text = "・${element.name}", style = MaterialTheme.typography.bodyLarge)
+            }
         }
     }
 }

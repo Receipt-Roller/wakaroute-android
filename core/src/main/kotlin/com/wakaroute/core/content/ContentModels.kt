@@ -243,3 +243,73 @@ data class LessonFeedbackRequest(
 /** The server's acknowledgement. Nothing in it is shown to the student. */
 @Serializable
 data class LessonFeedbackAcknowledgement(val lessonId: String = "")
+
+/**
+ * One stretch of study, as MANABU2 stores it.
+ *
+ * The app records **finished** sessions rather than driving the server's clock
+ * with start/stop. A timer that needs the network to start is a timer that does
+ * not work on a train, which is the situation this whole feature exists for.
+ */
+@Serializable
+data class StudySession(
+    val sessionId: String = "",
+    /** Our own id for the session. The server deduplicates replays on it. */
+    val clientSessionId: String? = null,
+    val courseId: String? = null,
+    val lessonId: String? = null,
+    val subject: String? = null,
+    val kind: String = "",
+    val startedAt: String? = null,
+    val endedAt: String? = null,
+    /** `yyyy-MM-dd` in the learner's own day, as the server reckons it. */
+    val studyDate: String = "",
+    @Serializable(with = LenientInt::class) val durationSeconds: Int? = null,
+    val status: String = "",
+)
+
+/**
+ * `POST /api/v1/me/study-sessions` — a session that already finished.
+ *
+ * [clientSessionId] is what makes the offline queue safe here: a replay of the
+ * same session is recognised and not counted twice. It is generated when the
+ * timer stops and stored with the queued record, never regenerated on resend —
+ * the same rule as the quiz idempotency key, for the same reason.
+ */
+@Serializable
+data class RecordStudySession(
+    val clientSessionId: String,
+    val startedAt: String,
+    val endedAt: String,
+    @Serializable(with = LenientInt::class) val durationSeconds: Int,
+    val subject: String? = null,
+    val courseId: String? = null,
+    val lessonId: String? = null,
+    val kind: String? = null,
+)
+
+/** `GET /api/v1/me/study-streak`. */
+@Serializable
+data class StudyStreak(
+    @Serializable(with = LenientInt::class) val currentDays: Int = 0,
+    @Serializable(with = LenientInt::class) val longestDays: Int = 0,
+    val lastStudyDate: String? = null,
+) {
+    companion object {
+        val None = StudyStreak()
+    }
+}
+
+/**
+ * One day in `GET /api/v1/me/study-summary`.
+ *
+ * The series is dense — zero days included — so the client never has to work
+ * out how many days a month has or where a range ends. Filling those gaps
+ * locally is, in the API's own words, the thing a client reliably gets wrong.
+ */
+@Serializable
+data class StudyDay(
+    val date: String,
+    @Serializable(with = LenientInt::class) val totalSeconds: Int = 0,
+    @Serializable(with = LenientInt::class) val sessionCount: Int = 0,
+)

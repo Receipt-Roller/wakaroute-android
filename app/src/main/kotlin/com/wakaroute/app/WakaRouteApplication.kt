@@ -19,6 +19,7 @@ import com.wakaroute.core.offline.FilePendingActionStore
 import com.wakaroute.core.offline.LearningActionQueue
 import java.io.File
 import com.wakaroute.core.profile.ProfileClient
+import com.wakaroute.core.study.StudyTimer
 import com.wakaroute.core.schools.HttpSchoolsRepository
 import com.wakaroute.core.schools.SchoolsRepository
 import com.wakaroute.app.data.AppPreferences
@@ -62,6 +63,7 @@ class AppServices(
     val profile: ProfileClient,
     val content: ContentClient,
     val actionQueue: LearningActionQueue,
+    val studyTimer: StudyTimer,
     val targetSchools: TargetSchoolsState,
 ) {
     companion object {
@@ -77,6 +79,13 @@ class AppServices(
             )
             val authenticated = AuthenticatedHttpClient(http, auth)
             val content = ContentClient(authenticated, environment)
+            val queue = LearningActionQueue(
+                // Losing this file costs the records waiting in it, not the
+                // feature — so it lives in filesDir rather than cache, which
+                // the system may clear at any time.
+                store = FilePendingActionStore(File(application.filesDir, "pending-actions.json")),
+                content = content,
+            )
 
             return AppServices(
                 environment = environment,
@@ -97,13 +106,8 @@ class AppServices(
                     )
                 },
                 content = content,
-                actionQueue = LearningActionQueue(
-                    // Losing this file costs the records waiting in it, not the
-                    // feature — so it lives in filesDir rather than cache, which
-                    // the system may clear at any time.
-                    store = FilePendingActionStore(File(application.filesDir, "pending-actions.json")),
-                    content = content,
-                ),
+                actionQueue = queue,
+                studyTimer = StudyTimer(queue),
                 preferences = AppPreferences(application),
                 auth = auth,
                 authenticatedHttp = authenticated,
