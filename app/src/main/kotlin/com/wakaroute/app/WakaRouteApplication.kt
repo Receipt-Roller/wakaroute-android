@@ -1,9 +1,15 @@
 package com.wakaroute.app
 
 import android.app.Application
+import com.wakaroute.app.data.KeystoreSecretStore
+import com.wakaroute.core.auth.AuthSession
+import com.wakaroute.core.auth.DeviceAuthClient
+import com.wakaroute.core.auth.StoredDeviceIdProvider
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.map.BundledUnderstandingMapRepository
 import com.wakaroute.core.map.UnderstandingMapRepository
+import com.wakaroute.core.net.AuthenticatedHttpClient
+import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.OkHttpHttpClient
 import com.wakaroute.core.schools.HttpSchoolsRepository
 import com.wakaroute.core.schools.SchoolsRepository
@@ -33,14 +39,36 @@ class AppServices(
     val schools: SchoolsRepository,
     val understandingMap: UnderstandingMapRepository,
     val preferences: AppPreferences,
+    /**
+     * Phase 2's foundation, assembled but **not yet used by any screen**.
+     *
+     * Registration happens on the first call to `accessToken()`, and nothing
+     * calls it today. That is deliberate: the app would otherwise create a
+     * MANABU2 learner account for every install while there is still no
+     * feature that writes anything to it. The account arrives with the screen
+     * that needs it.
+     */
+    val auth: AuthSession,
+    /** Use this for every MANABU2 call. It is the only path that renews safely. */
+    val authenticatedHttp: HttpClient,
 ) {
     companion object {
         fun live(application: Application): AppServices {
             val environment = AppEnvironment.Production
             val http = OkHttpHttpClient()
+            val secrets = KeystoreSecretStore(application)
+
+            val auth = AuthSession(
+                client = DeviceAuthClient(http, environment),
+                store = secrets,
+                deviceIds = StoredDeviceIdProvider(secrets),
+            )
 
             return AppServices(
                 environment = environment,
+                // Unauthenticated on purpose. The school catalogue needs no
+                // token, and going through the authenticated client would make
+                // browsing schools depend on registration having succeeded.
                 schools = HttpSchoolsRepository(http, environment),
                 // Phase 1 has no learner data of any kind, so the map is the
                 // authored graph and an empty record. See
@@ -48,6 +76,8 @@ class AppServices(
                 // rather than filled in.
                 understandingMap = BundledUnderstandingMapRepository(),
                 preferences = AppPreferences(application),
+                auth = auth,
+                authenticatedHttp = AuthenticatedHttpClient(http, auth),
             )
         }
     }

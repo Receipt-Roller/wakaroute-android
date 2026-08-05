@@ -18,3 +18,10 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# Tink, underneath EncryptedSharedPreferences, is annotated with Error Prone
+# markers that are compile-time only and deliberately not shipped. Their absence
+# is not a missing dependency — R8 simply cannot tell the difference and fails
+# the release build. Debug never sees this.
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
