@@ -40,6 +40,7 @@ import com.wakaroute.core.content.LessonDetail
 import com.wakaroute.core.documents.DocumentBlock
 import com.wakaroute.core.documents.DocumentParser
 import com.wakaroute.core.net.ApiError
+import com.wakaroute.core.offline.LearningActionQueue
 import java.net.URLDecoder
 import kotlinx.coroutines.launch
 
@@ -61,7 +62,9 @@ private sealed interface LessonState {
 @Composable
 fun LessonScreen(
     content: ContentClient,
+    queue: LearningActionQueue,
     lessonId: String,
+    onOpenQuiz: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val id = remember(lessonId) { URLDecoder.decode(lessonId, "UTF-8") }
@@ -78,10 +81,12 @@ fun LessonScreen(
             LessonState.Failed(e.studentFacingMessage(), e.isTransient)
         }
 
-        // Recorded after the body is on screen, and its failure is ignored.
-        // 「開いた」 is not worth a spinner in front of reading, and the endpoint
-        // is documented as safe to call on every open.
-        runCatching { content.markViewed(id) }
+        // Through the queue, so a lesson read underground is still recorded as
+        // read. Coalesced there — opening twice is one fact.
+        runCatching {
+            queue.markViewed(id)
+            queue.flush()
+        }
     }
 
     val loaded = state as? LessonState.Loaded
@@ -145,20 +150,14 @@ fun LessonScreen(
                 if (current.lesson.quiz != null) {
                     item {
                         ReadableColumn {
-                            // The quiz screen is not built yet. Said plainly
-                            // rather than left as a dead end the student keeps
-                            // scrolling to look for.
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                shape = MaterialTheme.shapes.medium,
+                            // Offered, not forced. The quiz is how a 要素 gets
+                            // past 意味がわかる, but a student who wants to read
+                            // the next lesson first is not doing it wrong.
+                            Button(
+                                onClick = { onOpenQuiz(id) },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(
-                                    text = "このレッスンには確認クイズがあります。クイズは準備中です。",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp),
-                                )
+                                Text("確認クイズにすすむ")
                             }
                         }
                     }
@@ -172,8 +171,14 @@ fun LessonScreen(
                             onComplete = {
                                 scope.launch {
                                     completing = true
-                                    completed = runCatching { content.markComplete(id).isCompleted }
-                                        .getOrDefault(false)
+                                    // Queued first: 「読み終えた」 must survive a
+                                    // tunnel. The button turns regardless,
+                                    // because the record is safe either way.
+                                    completed = runCatching {
+                                        queue.markComplete(id)
+                                        queue.flush()
+                                        true
+                                    }.getOrDefault(false)
                                     completing = false
                                 }
                             },

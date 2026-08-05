@@ -30,6 +30,7 @@ import com.wakaroute.app.feature.documents.DocumentScreen
 import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
 import com.wakaroute.app.feature.learn.LessonScreen
+import com.wakaroute.app.feature.learn.QuizScreen
 import com.wakaroute.app.feature.map.DomainScreen
 import com.wakaroute.app.feature.map.ElementScreen
 import com.wakaroute.app.feature.map.UnderstandingMapScreen
@@ -65,6 +66,7 @@ object Routes {
     const val MORE = "more"
     const val GOALS = "goals"
     const val LESSON = "lessons/{lessonId}"
+    const val QUIZ = "lessons/{lessonId}/quiz"
 
     const val DOMAIN = "map/{subject}/{domain}"
     const val ELEMENT = "map/{subject}/{domain}/{element}"
@@ -79,6 +81,8 @@ object Routes {
     fun schoolDetail(schoolId: String) = "schools/${java.net.URLEncoder.encode(schoolId, "UTF-8")}"
 
     fun lesson(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}"
+
+    fun quiz(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}/quiz"
 
     fun document(document: BundledDocument) = "documents/${document.name}"
 }
@@ -191,6 +195,17 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
     composable(Routes.LESSON) { entry ->
         LessonScreen(
             content = services.content,
+            queue = services.actionQueue,
+            lessonId = entry.arguments?.getString("lessonId").orEmpty(),
+            onOpenQuiz = { navController.navigate(Routes.quiz(it)) },
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.QUIZ) { entry ->
+        QuizScreen(
+            content = services.content,
+            queue = services.actionQueue,
             lessonId = entry.arguments?.getString("lessonId").orEmpty(),
             onBack = navController::popBackStack,
         )

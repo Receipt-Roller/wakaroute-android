@@ -218,3 +218,28 @@ data class LessonCompletion(
     val isCompleted: Boolean = false,
     val course: CourseProgress? = null,
 )
+
+/**
+ * `POST /api/v1/lessons/{id}/feedback` — §6 of the 共通判断規則.
+ *
+ * Two-valued on purpose. A five-point scale has 中学生 cluster on the middle,
+ * the average never moves, and nobody learns which lesson to fix.
+ */
+@Serializable
+data class LessonFeedbackRequest(
+    val understood: Boolean,
+    /** Dropped by the server when [understood] is true, so it is not sent then. */
+    val reasons: List<String> = emptyList(),
+    /**
+     * Free text, **read by a human**. The input field must tell the student not
+     * to write their name or their school.
+     *
+     * Over 1000 characters is a 400 — a permanent failure, which the offline
+     * queue discards. Truncated before it ever gets that far.
+     */
+    val comment: String? = null,
+)
+
+/** The server's acknowledgement. Nothing in it is shown to the student. */
+@Serializable
+data class LessonFeedbackAcknowledgement(val lessonId: String = "")

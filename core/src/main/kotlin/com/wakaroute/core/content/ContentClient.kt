@@ -108,6 +108,34 @@ class ContentClient(
     }
 
     /**
+     * `POST /api/v1/lessons/{id}/feedback` — 「わかった」/「むずかしかった」.
+     *
+     * `reasons` is omitted when [understood] is true, because the server
+     * discards it there. Sending a value that will be thrown away makes the
+     * request say something the caller did not mean.
+     */
+    suspend fun rateLesson(
+        lessonId: String,
+        understood: Boolean,
+        reasons: List<String> = emptyList(),
+        comment: String? = null,
+    ) {
+        val body = LessonFeedbackRequest(
+            understood = understood,
+            reasons = if (understood) emptyList() else reasons,
+            comment = comment,
+        )
+
+        http.sendDecoding(
+            postRequest(
+                path = "/api/v1/lessons/$lessonId/feedback",
+                body = WakaRouteJson.encodeToString(LessonFeedbackRequest.serializer(), body),
+            ),
+            LessonFeedbackAcknowledgement.serializer(),
+        )
+    }
+
+    /**
      * Writes are never retried here.
      *
      * A read that fails can be repeated harmlessly; a write that timed out may

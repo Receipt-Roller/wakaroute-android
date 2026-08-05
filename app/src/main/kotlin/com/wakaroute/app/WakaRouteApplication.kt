@@ -15,6 +15,9 @@ import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.net.AuthenticatedHttpClient
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.OkHttpHttpClient
+import com.wakaroute.core.offline.FilePendingActionStore
+import com.wakaroute.core.offline.LearningActionQueue
+import java.io.File
 import com.wakaroute.core.profile.ProfileClient
 import com.wakaroute.core.schools.HttpSchoolsRepository
 import com.wakaroute.core.schools.SchoolsRepository
@@ -58,6 +61,7 @@ class AppServices(
     val authenticatedHttp: HttpClient,
     val profile: ProfileClient,
     val content: ContentClient,
+    val actionQueue: LearningActionQueue,
     val targetSchools: TargetSchoolsState,
 ) {
     companion object {
@@ -93,6 +97,13 @@ class AppServices(
                     )
                 },
                 content = content,
+                actionQueue = LearningActionQueue(
+                    // Losing this file costs the records waiting in it, not the
+                    // feature — so it lives in filesDir rather than cache, which
+                    // the system may clear at any time.
+                    store = FilePendingActionStore(File(application.filesDir, "pending-actions.json")),
+                    content = content,
+                ),
                 preferences = AppPreferences(application),
                 auth = auth,
                 authenticatedHttp = authenticated,
