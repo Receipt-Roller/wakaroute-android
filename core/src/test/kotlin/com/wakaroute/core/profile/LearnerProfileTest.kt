@@ -36,6 +36,36 @@ class LearnerProfileTest {
     }
 
     @Test
+    fun `null and empty both mean not set`() = runTest {
+        // Production sends "" for email and null for displayName on the same
+        // unlinked account. That is a difference between two column defaults,
+        // not a difference about the student, so both collapse to "".
+        //
+        // This also pins `coerceInputValues` on WakaRouteJson: without it, the
+        // null throws and the profile screen breaks for every unlinked account
+        // — which is all of them today.
+        for (missing in listOf("null", "\"\"")) {
+            val profile = client(
+                """{"user":{"id":"TEST-USER-0001","email":$missing,"displayName":$missing}}""",
+            ).profile()
+
+            assertEquals("", profile.email)
+            assertEquals("", profile.displayName)
+            assertFalse(profile.isLinked)
+        }
+    }
+
+    @Test
+    fun `an absent field is the same as a null one`() = runTest {
+        // The server has dropped and re-added fields on this endpoint before.
+        val profile = client("""{"user":{"id":"TEST-USER-0001"}}""").profile()
+
+        assertEquals("", profile.email)
+        assertEquals("", profile.displayName)
+        assertFalse(profile.isLinked)
+    }
+
+    @Test
     fun `a linked account is recognised by its email, not its display name`() = runTest {
         // displayName can be set without linking. Only an email means the
         // account survives a new phone, which is the thing the student is being

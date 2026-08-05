@@ -30,7 +30,19 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LearnerProfile(
     val id: String,
-    /** Empty until the student links an email. Not a display fallback — see [isLinked]. */
+    /**
+     * Empty until the student links an email. Not a display fallback — see [isLinked].
+     *
+     * **`null` and `""` both mean "not set"** and are deliberately collapsed to
+     * `""`. Production sends `""` for `email` and `null` for `displayName` on
+     * the same unlinked account, which is a distinction about how two columns
+     * were initialised rather than anything about the student. Carrying it into
+     * the app would mean every caller writing `?.takeIf { it.isNotBlank() }`
+     * and one of them eventually forgetting.
+     *
+     * The collapse is done by `coerceInputValues` on [WakaRouteJson], which is
+     * a setting somebody could turn off. `LearnerProfileTest` fails if they do.
+     */
     val email: String = "",
     val displayName: String = "",
 ) {
@@ -40,6 +52,9 @@ data class LearnerProfile(
      * A device-only account dies with the install. A 中1 student who starts here
      * sits their exams in 中3 and will change phones at least once in between,
      * which is what the linking prompt exists for.
+     *
+     * Deliberately keyed on [email] rather than [displayName]: a name can be
+     * set without linking, and only an email is a way back in.
      */
     val isLinked: Boolean get() = email.isNotBlank()
 }

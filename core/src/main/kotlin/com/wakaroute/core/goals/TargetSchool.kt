@@ -25,8 +25,14 @@ data class TargetSchool(
      * A cache, not an identifier. A school that is renamed keeps its id and
      * therefore keeps the student's goal; only the label goes stale, and it is
      * refreshed the next time the list is written.
+     *
+     * Defaulted because the API's own `GoalWriteDto` declares `name` as
+     * nullable, so a null can be stored by any client and read back by us.
+     * §6 says an undecodable response must not be a crash, and here the
+     * alternative is worse than it sounds: one null name would fail the whole
+     * list, and the student would lose every 志望校 rather than one label.
      */
-    val name: String,
+    val name: String = "",
     /** 第一志望 is 0. Assigned by the server from the order it is sent. */
     @Serializable(with = LenientInt::class) val rank: Int = 0,
     /** 入試日, `yyyy-MM-dd`. Null when the school has not published one. */

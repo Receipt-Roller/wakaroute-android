@@ -52,6 +52,25 @@ class TargetSchoolsRepositoryTest {
     }
 
     @Test
+    fun `one null name does not cost the student the whole list`() = runTest {
+        // The API's own GoalWriteDto declares `name` as nullable, so any client
+        // can store one. Failing the decode would drop every 志望校 rather than
+        // one label.
+        val http = FakeApi(
+            """
+            {"goals":[{"type":"high_school","source":"wakaroute","externalId":"wk_1","name":null,"rank":0,"targetDate":null},
+                      {"type":"high_school","source":"wakaroute","externalId":"wk_2","name":"テスト高等学校","rank":1,"targetDate":null}],
+             "bindingDeadline":null,"daysRemaining":null}
+            """.trimIndent(),
+        )
+        val list = repository(http).load()
+
+        assertEquals(2, list.goals.size)
+        assertEquals("", list.goals.first().name)
+        assertEquals("wk_1", list.goals.first().externalId)
+    }
+
+    @Test
     fun `adding sends the existing goals back plus the new one`() = runTest {
         // Anything left out of the PUT is deleted. This is the mistake that
         // silently wipes a student's other 志望校.
