@@ -2,15 +2,18 @@ package com.wakaroute.app
 
 import android.app.Application
 import com.wakaroute.app.data.KeystoreSecretStore
+import com.wakaroute.app.data.TargetSchoolsState
 import com.wakaroute.core.auth.AuthSession
 import com.wakaroute.core.auth.DeviceAuthClient
 import com.wakaroute.core.auth.StoredDeviceIdProvider
 import com.wakaroute.core.config.AppEnvironment
+import com.wakaroute.core.goals.HttpTargetSchoolsRepository
 import com.wakaroute.core.map.BundledUnderstandingMapRepository
 import com.wakaroute.core.map.UnderstandingMapRepository
 import com.wakaroute.core.net.AuthenticatedHttpClient
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.OkHttpHttpClient
+import com.wakaroute.core.profile.ProfileClient
 import com.wakaroute.core.schools.HttpSchoolsRepository
 import com.wakaroute.core.schools.SchoolsRepository
 import com.wakaroute.app.data.AppPreferences
@@ -51,6 +54,8 @@ class AppServices(
     val auth: AuthSession,
     /** Use this for every MANABU2 call. It is the only path that renews safely. */
     val authenticatedHttp: HttpClient,
+    val profile: ProfileClient,
+    val targetSchools: TargetSchoolsState,
 ) {
     companion object {
         fun live(application: Application): AppServices {
@@ -63,6 +68,7 @@ class AppServices(
                 store = secrets,
                 deviceIds = StoredDeviceIdProvider(secrets),
             )
+            val authenticated = AuthenticatedHttpClient(http, auth)
 
             return AppServices(
                 environment = environment,
@@ -77,7 +83,12 @@ class AppServices(
                 understandingMap = BundledUnderstandingMapRepository(),
                 preferences = AppPreferences(application),
                 auth = auth,
-                authenticatedHttp = AuthenticatedHttpClient(http, auth),
+                authenticatedHttp = authenticated,
+                profile = ProfileClient(authenticated, environment),
+                targetSchools = TargetSchoolsState(
+                    repository = HttpTargetSchoolsRepository(authenticated, environment),
+                    auth = auth,
+                ),
             )
         }
     }

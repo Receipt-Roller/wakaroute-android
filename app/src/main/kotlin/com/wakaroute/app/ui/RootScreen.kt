@@ -180,6 +180,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
     composable(Routes.SCHOOL_DETAIL) { entry ->
         SchoolDetailScreen(
             schools = services.schools,
+            targetSchools = services.targetSchools,
             schoolId = entry.arguments?.getString("schoolId").orEmpty(),
             onBack = navController::popBackStack,
         )
@@ -188,6 +189,8 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
     composable(Routes.MORE) {
         MoreScreen(
             environment = services.environment,
+            auth = services.auth,
+            profile = services.profile,
             onOpenDocument = { navController.navigate(Routes.document(it)) },
         )
     }

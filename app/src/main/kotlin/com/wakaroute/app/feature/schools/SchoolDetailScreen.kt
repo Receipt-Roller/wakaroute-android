@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +21,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -26,9 +31,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wakaroute.app.data.TargetSchoolsState
+import com.wakaroute.app.data.TargetSchoolsUi
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.core.net.ApiError
 import com.wakaroute.core.schools.SchoolAdmissionResult
@@ -50,6 +61,7 @@ private sealed interface DetailState {
 @Composable
 fun SchoolDetailScreen(
     schools: SchoolsRepository,
+    targetSchools: TargetSchoolsState,
     schoolId: String,
     onBack: () -> Unit,
 ) {
@@ -105,14 +117,14 @@ fun SchoolDetailScreen(
                     onAction = { state = DetailState.Loading },
                 )
 
-                is DetailState.Loaded -> DetailBody(current.detail)
+                is DetailState.Loaded -> DetailBody(current.detail, targetSchools)
             }
         }
     }
 }
 
 @Composable
-private fun DetailBody(detail: SchoolDetail) {
+private fun DetailBody(detail: SchoolDetail, targetSchools: TargetSchoolsState) {
     val school = detail.school
 
     Column(
@@ -126,6 +138,8 @@ private fun DetailBody(detail: SchoolDetail) {
             school.nameKana?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+
+            TargetSchoolButton(detail = detail, targetSchools = targetSchools)
 
             Field("設置区分", school.ownershipDisplay)
             Field("所在地", listOfNotNull(school.postalCode?.let { "〒$it" }, school.address).joinToString(" ").ifBlank { null })
@@ -182,6 +196,82 @@ private fun DetailBody(detail: SchoolDetail) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp),
+            )
+        }
+    }
+}
+
+/**
+ * 志望校 への追加と取り消し。
+ *
+ * **This is the first thing in the app that needs an account**, and it is where
+ * device registration actually happens — on the tap, not at launch. A student
+ * who only browses schools never gets a MANABU2 learner created for them.
+ *
+ * The button therefore does two round trips on a first-ever tap (register, then
+ * write) and can be slow. It is disabled while in flight rather than optimistic:
+ * a school that appears in the list and then quietly is not saved is worse than
+ * one that takes a moment to appear.
+ */
+@Composable
+private fun TargetSchoolButton(detail: SchoolDetail, targetSchools: TargetSchoolsState) {
+    val state by targetSchools.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var working by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { targetSchools.refreshIfRegistered() }
+
+    val loaded = state as? TargetSchoolsUi.Loaded
+    val isTarget = loaded?.list?.contains(detail.school.id) == true
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (isTarget) {
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        working = true
+                        failed = !targetSchools.remove(detail.school.id)
+                        working = false
+                    }
+                },
+                enabled = !working,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("志望校に登録しています")
+            }
+        } else {
+            Button(
+                onClick = {
+                    scope.launch {
+                        working = true
+                        failed = !targetSchools.add(
+                            schoolId = detail.school.id,
+                            name = detail.school.name,
+                            // The catalogue's own date where it has one. Sent as
+                            // the plain yyyy-MM-dd the API expects, never via an
+                            // Instant — that would move a 2月21日 exam a day.
+                            examDate = detail.nextExamDate(LocalDate.now())?.toString(),
+                        )
+                        working = false
+                    }
+                },
+                enabled = !working,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.Flag, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (working) "登録しています…" else "志望校に登録する")
+            }
+        }
+
+        if (failed) {
+            Text(
+                text = "保存できませんでした。電波のあるところで、もう一度ためしてください。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }

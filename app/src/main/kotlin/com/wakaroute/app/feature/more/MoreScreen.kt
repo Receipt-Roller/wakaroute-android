@@ -16,7 +16,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -24,7 +28,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ReadableColumn
+import com.wakaroute.core.auth.AuthSession
 import com.wakaroute.core.config.AppEnvironment
+import com.wakaroute.core.net.ApiError
+import com.wakaroute.core.profile.ProfileClient
 import com.wakaroute.core.documents.BundledDocument
 
 /**
@@ -37,6 +44,8 @@ import com.wakaroute.core.documents.BundledDocument
 @Composable
 fun MoreScreen(
     environment: AppEnvironment,
+    auth: AuthSession,
+    profile: ProfileClient,
     onOpenDocument: (BundledDocument) -> Unit,
 ) {
     val context = LocalContext.current
@@ -61,6 +70,8 @@ fun MoreScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
+
+            LearningRecordSection(auth, profile)
 
             // Every document is bundled, so this list works with no signal.
             // §3: a 中学生 tapping 利用規約 must not be handed to a browser.
@@ -102,6 +113,74 @@ fun MoreScreen(
             )
         }
     }
+}
+
+/**
+ * Where the student's records actually live.
+ *
+ * The 利用規約 tells them this matters — an unlinked account dies with the
+ * install — so the app owes them a straight answer rather than making them
+ * infer it. Three states, and they are genuinely different things:
+ *
+ * - **no account yet**: nothing has been saved anywhere. Not a warning.
+ * - **device only**: saved, but a new phone loses it.
+ * - **linked**: survives a new phone.
+ *
+ * Only fetched when an account already exists, for the same reason as the home
+ * screen: asking would create one.
+ */
+@Composable
+private fun LearningRecordSection(auth: AuthSession, profile: ProfileClient) {
+    var state by remember { mutableStateOf<RecordState>(RecordState.Loading) }
+
+    LaunchedEffect(Unit) {
+        state = if (!auth.isRegistered()) {
+            RecordState.NoAccount
+        } else {
+            try {
+                RecordState.Known(profile.profile().isLinked)
+            } catch (e: ApiError) {
+                RecordState.Unknown
+            }
+        }
+    }
+
+    val message = when (val current = state) {
+        RecordState.Loading -> return
+        RecordState.NoAccount ->
+            "まだ何も保存していません。志望校を登録すると、この端末に記録がつくられます。"
+
+        // Stated plainly, without alarm. Linking is Phase 2 の引き継ぎ and does
+        // not exist yet, so telling a student to act on this now would point
+        // them at a button that is not there.
+        is RecordState.Known -> if (current.isLinked) {
+            "学習記録はメールアドレスに紐づいています。スマホを変えても引き継げます。"
+        } else {
+            "学習記録はこの端末の中にあります。スマホを変えると引き継げません。引き継ぐしくみは準備中です。"
+        }
+
+        RecordState.Unknown ->
+            "学習記録の状態をいま確認できませんでした。"
+    }
+
+    Text(
+        text = "学習記録",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 16.dp),
+    )
+}
+
+private sealed interface RecordState {
+    data object Loading : RecordState
+    data object NoAccount : RecordState
+    data class Known(val isLinked: Boolean) : RecordState
+    data object Unknown : RecordState
 }
 
 @Composable

@@ -21,6 +21,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +30,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakaroute.app.AppServices
+import com.wakaroute.app.data.TargetSchoolsUi
+import com.wakaroute.core.goals.TargetSchoolList
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
@@ -67,6 +72,8 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ReadableColumn(spacing = 16.dp) {
+            TargetSchoolsSection(services, onOpenSchools)
+
             Text(
                 text = "いま使えること",
                 style = MaterialTheme.typography.headlineSmall,
@@ -104,6 +111,112 @@ fun HomeScreen(
             )
 
             PreparingSection()
+        }
+    }
+}
+
+/**
+ * 志望校 and the count of days to the first exam.
+ *
+ * The count is **the server's `daysRemaining`**, shown as it arrives. Computing
+ * it here would eventually disagree — a phone in another timezone, or one whose
+ * clock is wrong — and two screens giving a student different numbers of days
+ * until their exam is worse than either number on its own.
+ *
+ * Loaded only when the device already has an account. Registration happens the
+ * first time a student adds a 志望校, so a student who has never done that sees
+ * the invitation below and causes no network call at all.
+ */
+@Composable
+private fun TargetSchoolsSection(services: AppServices, onOpenSchools: () -> Unit) {
+    val state by services.targetSchools.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { services.targetSchools.refreshIfRegistered() }
+
+    when (val current = state) {
+        // Before any account exists, and while loading. Both draw the same
+        // invitation rather than a spinner: there is nothing a student needs to
+        // wait for, and a spinner on the first screen reads as a fault.
+        TargetSchoolsUi.NotRegistered, TargetSchoolsUi.Loading ->
+            TargetSchoolsInvitation(onOpenSchools)
+
+        is TargetSchoolsUi.Failed -> Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = "志望校を読み込めませんでした。${current.message}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+
+        is TargetSchoolsUi.Loaded ->
+            if (current.list.isEmpty) {
+                TargetSchoolsInvitation(onOpenSchools)
+            } else {
+                TargetSchoolsCard(current.list)
+            }
+    }
+}
+
+@Composable
+private fun TargetSchoolsInvitation(onOpenSchools: () -> Unit) {
+    ActionCard(
+        icon = Icons.Filled.Flag,
+        title = "志望校を登録する",
+        // No promise about what registering will unlock beyond what it does
+        // today: the count of days. 学習の記録 is still 準備中 and saying it here
+        // would be selling something that does not exist yet.
+        body = "気になる高校を志望校に登録すると、入試までの日数がここに出ます。",
+        onClick = onOpenSchools,
+    )
+}
+
+@Composable
+private fun TargetSchoolsCard(list: TargetSchoolList) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "志望校",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+
+            list.goals.forEachIndexed { index, goal ->
+                Text(
+                    // 第一志望 is the only rank worth naming. Numbering the rest
+                    // turns an ordered list into a ranking of schools, which is
+                    // not what a student meant by putting them in an order.
+                    text = if (index == 0) "第一志望　${goal.name}" else goal.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+
+            list.daysRemaining?.let { days ->
+                Text(
+                    text = when {
+                        days > 0 -> "入試まであと $days 日（${list.bindingDeadline}）"
+                        days == 0 -> "入試は今日です"
+                        // A date in the past is a real state: the catalogue
+                        // carries several years, and a student may not have
+                        // updated their list. Not drawn as an error.
+                        else -> "入試日（${list.bindingDeadline}）は過ぎています"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
     }
 }
