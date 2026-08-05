@@ -29,6 +29,7 @@ import com.wakaroute.app.AppServices
 import com.wakaroute.app.feature.documents.DocumentScreen
 import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
+import com.wakaroute.app.feature.learn.LessonScreen
 import com.wakaroute.app.feature.map.DomainScreen
 import com.wakaroute.app.feature.map.ElementScreen
 import com.wakaroute.app.feature.map.UnderstandingMapScreen
@@ -63,6 +64,7 @@ object Routes {
     const val SCHOOLS = "schools"
     const val MORE = "more"
     const val GOALS = "goals"
+    const val LESSON = "lessons/{lessonId}"
 
     const val DOMAIN = "map/{subject}/{domain}"
     const val ELEMENT = "map/{subject}/{domain}/{element}"
@@ -75,6 +77,8 @@ object Routes {
         "map/${subject.name}/$domainCode/${java.net.URLEncoder.encode(elementId, "UTF-8")}"
 
     fun schoolDetail(schoolId: String) = "schools/${java.net.URLEncoder.encode(schoolId, "UTF-8")}"
+
+    fun lesson(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}"
 
     fun document(document: BundledDocument) = "documents/${document.name}"
 }
@@ -174,9 +178,20 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
     composable(Routes.ELEMENT) { entry ->
         ElementScreen(
             mapState = services.understandingMap,
+            content = services.content,
+            isRegistered = services.auth::isRegistered,
+            onOpenLesson = { navController.navigate(Routes.lesson(it)) },
             subjectName = entry.arguments?.getString("subject").orEmpty(),
             domainCode = entry.arguments?.getString("domain").orEmpty(),
             elementId = entry.arguments?.getString("element").orEmpty(),
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.LESSON) { entry ->
+        LessonScreen(
+            content = services.content,
+            lessonId = entry.arguments?.getString("lessonId").orEmpty(),
             onBack = navController::popBackStack,
         )
     }

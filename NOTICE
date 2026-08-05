@@ -61,3 +61,7 @@ Third-party libraries retain their respective licenses:
 
   OkHttp
     Copyright Square, Inc. — Apache License 2.0
+
+  AndroidSVG
+    Copyright 2013 Paul LeBeau, Cave Rock Software Ltd. — Apache License 2.0
+    Used to render the inline SVG diagrams that MANABU2 lesson bodies contain.

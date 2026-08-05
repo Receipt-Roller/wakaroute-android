@@ -88,6 +88,15 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.security.crypto)
 
+    // Renders the inline SVG diagrams in lesson bodies.
+    //
+    // Chosen over hand-drawing them onto a Canvas: these are number lines and
+    // coordinate grids in a maths lesson, and a subtly wrong diagram is worse
+    // than the text description we would otherwise show. AndroidSVG rather than
+    // an image-loading framework because the SVG arrives as a string in the
+    // lesson JSON, not as a URL to fetch.
+    implementation(libs.androidsvg)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)

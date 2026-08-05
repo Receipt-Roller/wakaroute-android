@@ -57,6 +57,7 @@ class AppServices(
     /** Use this for every MANABU2 call. It is the only path that renews safely. */
     val authenticatedHttp: HttpClient,
     val profile: ProfileClient,
+    val content: ContentClient,
     val targetSchools: TargetSchoolsState,
 ) {
     companion object {
@@ -71,6 +72,7 @@ class AppServices(
                 deviceIds = StoredDeviceIdProvider(secrets),
             )
             val authenticated = AuthenticatedHttpClient(http, auth)
+            val content = ContentClient(authenticated, environment)
 
             return AppServices(
                 environment = environment,
@@ -86,10 +88,11 @@ class AppServices(
                     val bundled = BundledUnderstandingMapRepository()
                     UnderstandingMapState(
                         bundled = bundled,
-                        live = LiveUnderstandingMap(ContentClient(authenticated, environment), bundled),
+                        live = LiveUnderstandingMap(content, bundled),
                         isRegistered = auth::isRegistered,
                     )
                 },
+                content = content,
                 preferences = AppPreferences(application),
                 auth = auth,
                 authenticatedHttp = authenticated,

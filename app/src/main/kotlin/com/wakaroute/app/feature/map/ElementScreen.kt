@@ -29,6 +29,8 @@ import com.wakaroute.core.map.LearningElement
 import com.wakaroute.core.map.MasteryLevel
 import com.wakaroute.core.map.SubjectMapState
 import com.wakaroute.app.data.UnderstandingMapState
+import com.wakaroute.app.feature.learn.LessonList
+import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.map.isMeasurable
 import java.net.URLDecoder
 
@@ -44,9 +46,12 @@ import java.net.URLDecoder
 @Composable
 fun ElementScreen(
     mapState: UnderstandingMapState,
+    content: ContentClient,
+    isRegistered: () -> Boolean,
     subjectName: String,
     domainCode: String,
     elementId: String,
+    onOpenLesson: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val subject = remember(subjectName) { subjectNamed(subjectName) }
@@ -93,6 +98,14 @@ fun ElementScreen(
                     )
                 }
 
+                // A 要素 is a MANABU2 course, so its id is the course id.
+                LessonList(
+                    content = content,
+                    courseId = element.id.value,
+                    isRegistered = isRegistered,
+                    onOpenLesson = onOpenLesson,
+                )
+
                 MasteryScale(current = available.progress.recordOrEmpty[element.id])
 
                 ElementList(
@@ -111,12 +124,6 @@ fun ElementScreen(
                     elements = dependants,
                 )
 
-                Text(
-                    text = "レッスンとクイズは準備中です。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 24.dp),
-                )
             }
         }
     }

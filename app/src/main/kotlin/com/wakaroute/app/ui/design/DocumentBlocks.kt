@@ -1,5 +1,6 @@
 package com.wakaroute.app.ui.design
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,6 +8,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -25,6 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -209,36 +214,79 @@ private fun CollapsibleView(block: DocumentBlock.Collapsible, modifier: Modifier
 }
 
 /**
- * A diagram.
+ * A diagram, drawn.
  *
- * **The drawing itself is not rendered yet.** What is shown is the author's own
- * `<desc>` — written in Japanese, describing what the figure shows — which is
- * what a screen reader would be given in any case. That is a real reduction for
- * a sighted student and it is marked as one rather than hidden.
+ * Rendered with AndroidSVG rather than hand-plotted onto a Canvas: these are
+ * number lines and coordinate grids, and a **subtly wrong** maths diagram is
+ * worse than none. §3 rules out a WebView, so a real SVG renderer is the
+ * remaining honest option.
  *
- * Rendering the SVG needs a decision nobody has made: §3 rules out WebView, and
- * hand-writing an SVG subset renderer risks drawing a **subtly wrong number
- * line** in a maths lesson, which is worse than describing it. Raised in AB.
+ * Two things it must not do:
+ *
+ * - **Fail silently.** If the SVG cannot be parsed, the author's `<desc>` is
+ *   shown instead. The content survives either way.
+ * - **Disappear in dark mode.** The diagrams hard-code `#333` strokes, which on
+ *   a dark surface is invisible. They are drawn on a fixed light card in both
+ *   themes — which is also how a diagram in a textbook looks.
  */
 @Composable
 private fun FigureView(figure: DocumentBlock.Figure, modifier: Modifier) {
-    val description = figure.description ?: figure.title ?: return
+    val description = figure.description ?: figure.title
+    val svg = remember(figure.svg) { RenderableSvg.parse(figure.svg) }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        // Fixed, not themed. See above.
+        color = FIGURE_BACKGROUND,
         shape = MaterialTheme.shapes.small,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = figure.title?.let { "図: $it" } ?: "図",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(text = description, style = MaterialTheme.typography.bodyMedium)
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (svg == null) {
+                // The drawing is unavailable; the description is not a caption
+                // here but the content itself.
+                Text(
+                    text = figure.title?.let { "図: $it" } ?: "図",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = FIGURE_LABEL,
+                )
+                description?.let {
+                    Text(text = it, style = MaterialTheme.typography.bodyMedium, color = FIGURE_TEXT)
+                }
+                return@Column
+            }
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(svg.aspectRatio)
+                    // The whole figure is one node to a screen reader, labelled
+                    // with what the author said it shows. Without this it is an
+                    // unlabelled rectangle.
+                    .semantics {
+                        contentDescription = listOfNotNull(figure.title, description)
+                            .distinct()
+                            .joinToString("。")
+                            .ifBlank { "図" }
+                    },
+            ) {
+                drawIntoCanvas { canvas -> svg.drawInto(canvas.nativeCanvas, size.width, size.height) }
+            }
+
+            // Kept beside the drawing rather than only in the semantics: it is
+            // a caption a sighted student can use too, and it is the only thing
+            // left if the drawing ever stops rendering.
+            description?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall, color = FIGURE_LABEL)
+            }
         }
     }
 }
+
+/** Paper, in both themes — the diagrams are drawn in dark ink on the assumption of it. */
+private val FIGURE_BACKGROUND = Color(0xFFFFFFFF)
+private val FIGURE_TEXT = Color(0xFF1B1B1F)
+private val FIGURE_LABEL = Color(0xFF43474E)
 
 /** Keeps the authored emphasis, which in these documents carries meaning. */
 fun List<InlineSpan>.annotated() = buildAnnotatedString {
