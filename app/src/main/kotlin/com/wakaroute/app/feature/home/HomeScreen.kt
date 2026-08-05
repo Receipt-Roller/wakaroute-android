@@ -60,6 +60,7 @@ fun HomeScreen(
     services: AppServices,
     onOpenMap: () -> Unit,
     onOpenSchools: () -> Unit,
+    onOpenGoals: () -> Unit,
     onOpenDocument: (BundledDocument) -> Unit,
 ) {
     val mathState = remember { services.understandingMap.state(SchoolSubject.Math) }
@@ -72,7 +73,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ReadableColumn(spacing = 16.dp) {
-            TargetSchoolsSection(services, onOpenSchools)
+            TargetSchoolsSection(services, onOpenSchools, onOpenGoals)
 
             Text(
                 text = "いま使えること",
@@ -128,7 +129,11 @@ fun HomeScreen(
  * the invitation below and causes no network call at all.
  */
 @Composable
-private fun TargetSchoolsSection(services: AppServices, onOpenSchools: () -> Unit) {
+private fun TargetSchoolsSection(
+    services: AppServices,
+    onOpenSchools: () -> Unit,
+    onOpenGoals: () -> Unit,
+) {
     val state by services.targetSchools.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { services.targetSchools.refreshIfRegistered() }
@@ -157,7 +162,7 @@ private fun TargetSchoolsSection(services: AppServices, onOpenSchools: () -> Uni
             if (current.list.isEmpty) {
                 TargetSchoolsInvitation(onOpenSchools)
             } else {
-                TargetSchoolsCard(current.list)
+                TargetSchoolsCard(current.list, onOpenGoals)
             }
     }
 }
@@ -176,10 +181,11 @@ private fun TargetSchoolsInvitation(onOpenSchools: () -> Unit) {
 }
 
 @Composable
-private fun TargetSchoolsCard(list: TargetSchoolList) {
+private fun TargetSchoolsCard(list: TargetSchoolList, onOpenGoals: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = MaterialTheme.shapes.medium,
+        onClick = onOpenGoals,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -217,6 +223,15 @@ private fun TargetSchoolsCard(list: TargetSchoolList) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
+
+            // The card is tappable, and nothing about a filled surface says so.
+            // Spelled out rather than hinted with a chevron, because 「並べ替え」
+            // is not a thing a student would think to try on a summary card.
+            Text(
+                text = "タップして順番を変える・取り消す",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
         }
     }
 }

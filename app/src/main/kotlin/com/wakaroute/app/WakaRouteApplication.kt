@@ -87,7 +87,7 @@ class AppServices(
                 profile = ProfileClient(authenticated, environment),
                 targetSchools = TargetSchoolsState(
                     repository = HttpTargetSchoolsRepository(authenticated, environment),
-                    auth = auth,
+                    isRegistered = auth::isRegistered,
                 ),
             )
         }

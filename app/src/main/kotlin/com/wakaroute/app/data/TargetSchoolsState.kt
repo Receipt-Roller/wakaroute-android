@@ -1,8 +1,8 @@
 package com.wakaroute.app.data
 
-import com.wakaroute.core.auth.AuthSession
 import com.wakaroute.core.goals.TargetSchoolList
 import com.wakaroute.core.goals.TargetSchoolsRepository
+import com.wakaroute.core.goals.moved
 import com.wakaroute.core.net.ApiError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +18,15 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class TargetSchoolsState(
     private val repository: TargetSchoolsRepository,
-    private val auth: AuthSession,
+    /**
+     * Whether this device already has an account.
+     *
+     * A function rather than the [AuthSession] itself, so this holder — and the
+     * screens that use it — can be tested without a Keystore. It is also the
+     * whole of what this class needs from auth, and saying so keeps the two
+     * from growing into each other.
+     */
+    private val isRegistered: () -> Boolean,
 ) {
     private val _state = MutableStateFlow<TargetSchoolsUi>(TargetSchoolsUi.NotRegistered)
     val state: StateFlow<TargetSchoolsUi> = _state.asStateFlow()
@@ -38,7 +46,7 @@ class TargetSchoolsState(
      * Raised in AB rather than done quietly.
      */
     suspend fun refreshIfRegistered() {
-        if (!auth.isRegistered()) {
+        if (!isRegistered()) {
             _state.value = TargetSchoolsUi.NotRegistered
             return
         }
@@ -49,6 +57,40 @@ class TargetSchoolsState(
         mutate { repository.add(schoolId, name, examDate) }
 
     suspend fun remove(schoolId: String) = mutate { repository.remove(schoolId) }
+
+    /**
+     * Moves one 志望校, showing the new order **before** the server confirms it.
+     *
+     * Optimistic here and nowhere else. Reordering is a direct manipulation —
+     * the student is pointing at a row and saying "up" — and a list that sits
+     * still for a round trip reads as a dead button, so they tap again and now
+     * two moves are in flight. Adding and removing are not like that: those are
+     * one deliberate action with a clear before and after, and they can afford
+     * to wait for the truth.
+     *
+     * On failure the previous order is restored and [Failed] is reported, so a
+     * move that did not save never masquerades as one that did.
+     */
+    suspend fun move(from: Int, to: Int): Boolean {
+        val current = (_state.value as? TargetSchoolsUi.Loaded) ?: return false
+        val reordered = current.list.goals.moved(from, to)
+        if (reordered == current.list.goals) return true
+
+        // Ranks are the server's to assign, so the local copy renumbers them
+        // too. Leaving them stale would make 第一志望 the second row until the
+        // response landed.
+        _state.value = TargetSchoolsUi.Loaded(
+            current.list.copy(goals = reordered.mapIndexed { index, goal -> goal.copy(rank = index) }),
+        )
+
+        return try {
+            _state.value = TargetSchoolsUi.Loaded(repository.reorder(reordered.map { it.externalId }))
+            true
+        } catch (e: ApiError) {
+            _state.value = current
+            false
+        }
+    }
 
     private suspend fun load() {
         _state.value = TargetSchoolsUi.Loading

@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.wakaroute.app.AppServices
 import com.wakaroute.app.feature.documents.DocumentScreen
+import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
 import com.wakaroute.app.feature.map.DomainScreen
 import com.wakaroute.app.feature.map.ElementScreen
@@ -61,6 +62,7 @@ object Routes {
     const val MAP = "map"
     const val SCHOOLS = "schools"
     const val MORE = "more"
+    const val GOALS = "goals"
 
     const val DOMAIN = "map/{subject}/{domain}"
     const val ELEMENT = "map/{subject}/{domain}/{element}"
@@ -137,7 +139,16 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             services = services,
             onOpenMap = { navController.switchTab(Routes.MAP) },
             onOpenSchools = { navController.switchTab(Routes.SCHOOLS) },
+            onOpenGoals = { navController.navigate(Routes.GOALS) },
             onOpenDocument = { navController.navigate(Routes.document(it)) },
+        )
+    }
+
+    composable(Routes.GOALS) {
+        TargetSchoolsScreen(
+            targetSchools = services.targetSchools,
+            onFindSchools = { navController.switchTab(Routes.SCHOOLS) },
+            onBack = navController::popBackStack,
         )
     }
 
