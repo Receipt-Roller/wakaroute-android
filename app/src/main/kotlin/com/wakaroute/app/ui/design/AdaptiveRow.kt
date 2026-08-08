@@ -72,10 +72,22 @@ fun ReadableColumn(
 ) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Column(
-            // fillMaxWidth as well as the cap. Without it the column shrinks to
-            // its widest child, so a short line like 「8項目」 ends up centred on
-            // the screen while the paragraph under it is left-aligned.
-            modifier = Modifier.fillMaxWidth().widthIn(max = READABLE_WIDTH),
+            // **Order matters, and getting it wrong silently disables the cap.**
+            //
+            // `fillMaxWidth()` sets the minimum width as well as the maximum, so
+            // a `widthIn(max = …)` placed after it is handed a minimum it cannot
+            // go below and the column fills the screen anyway. Written this way
+            // round, the cap constrains first and fillMaxWidth then fills what
+            // is left of it.
+            //
+            // fillMaxWidth is still needed: without it the column shrinks to its
+            // widest child, so a short line like 「8項目」 ends up centred on the
+            // screen while the paragraph under it is left-aligned.
+            //
+            // Both orders look identical on a phone, where the screen is
+            // narrower than the cap and it never binds. This was wrong for
+            // months and only showed up on a tablet.
+            modifier = Modifier.widthIn(max = READABLE_WIDTH).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(spacing),
             content = { content() },
         )
