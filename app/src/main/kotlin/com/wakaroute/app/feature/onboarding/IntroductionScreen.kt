@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SubdirectoryArrowLeft
 import androidx.compose.material.icons.outlined.AccountTree
@@ -37,8 +38,10 @@ import com.wakaroute.app.ui.theme.WakaRouteTheme
  *
  * 1. **It is not a sign-up.** No account, no email, no password — that is the
  *    product decision, and the intro is where a student first sees it kept.
- * 2. **It describes only what this build does.** 学習履歴, クイズ and 志望校
- *    belong to Phase 2, so they are named as 準備中 rather than promised.
+ * 2. **It describes only what this build does.** The 準備中 paragraph is the
+ *    first thing to go stale when a phase lands — it named 学習の記録, クイズ and
+ *    志望校 long after all three shipped. Check it against the app before
+ *    release, not against this comment.
  * 3. **It does not predict results.** 「合格できます」 in any form is ruled out by
  *    the 利用規約 and the 保護者向けガイド alike.
  */
@@ -81,6 +84,13 @@ fun IntroductionScreen(onFinish: () -> Unit) {
                 )
 
                 IntroPoint(
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    title = "レッスンで学び、記録が残る",
+                    body = "レッスンを読んで確認クイズに答えると、進んだところが理解マップに反映されます。" +
+                        "勉強した時間も記録できます。",
+                )
+
+                IntroPoint(
                     icon = Icons.Filled.School,
                     title = "高校を探す",
                     body = "全国の高校を、キーワード・都道府県・設置区分でさがせます。" +
@@ -93,7 +103,7 @@ fun IntroductionScreen(onFinish: () -> Unit) {
                 )
 
                 Text(
-                    text = "学習の記録、レッスンとクイズ、志望校の登録は、まだ動いていません。" +
+                    text = "数学以外の教科の理解マップ、学習リマインダー、保護者との連携は、まだ動いていません。" +
                         "できあがるまで、アプリの中では「準備中」と表示されます。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
