@@ -30,6 +30,28 @@ class BundledDocumentTest {
     }
 
     @Test
+    fun `no document tells an Android student about iOS`() {
+        // These documents are written once and shipped to both apps, so the
+        // iOS wording travels with them. 「iOS のキーチェーンに保管します」 sat in
+        // the Android privacy policy — a legal document telling a student
+        // something false about where the key to their account is kept.
+        //
+        // It is the kind of thing nobody re-reads after the first sync, so the
+        // build checks it instead.
+        val iosOnly = listOf("iOS", "iPhone", "iPad", "キーチェーン", "App Store", "Apple")
+
+        for (document in BundledDocument.entries) {
+            val html = document.html().orEmpty()
+            for (word in iosOnly) {
+                assertTrue(
+                    "${document.title} mentions 「$word」 — this is the Android app",
+                    !html.contains(word, ignoreCase = true),
+                )
+            }
+        }
+    }
+
+    @Test
     fun `every document parses into blocks with a title`() {
         for (document in BundledDocument.entries) {
             val blocks = document.blocks()

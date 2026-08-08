@@ -32,6 +32,32 @@ suspend fun <T> HttpClient.sendDecoding(request: HttpRequest, serializer: KSeria
 }
 
 /**
+ * Sends a request that answers with no body, and **checks the status**.
+ *
+ * `HttpClient.send` on its own returns the response and lets the caller ignore
+ * it, which is right for a fire-and-forget 「開いた」 and wrong for anything the
+ * student is waiting on. A 204 has nothing to decode, so [sendDecoding] cannot
+ * be used — and reaching for raw `send` instead is how a failed delete comes
+ * back as 「削除しました」.
+ */
+suspend fun HttpClient.sendExpectingNoContent(request: HttpRequest) {
+    val response = try {
+        send(request)
+    } catch (e: ApiError) {
+        throw e
+    } catch (e: Exception) {
+        throw ApiError.Unknown(e.message ?: e::class.java.simpleName)
+    }
+
+    if (response.status !in 200..299) {
+        val problem = runCatching {
+            WakaRouteJson.decodeFromString(ProblemDetails.serializer(), response.body)
+        }.getOrNull()
+        throw ApiError.Http(response.status, problem)
+    }
+}
+
+/**
  * Retries a read a bounded number of times, with a growing wait.
  *
  * Deliberately restricted to reads. §6 permits retrying only 「GETの一時的失敗」,

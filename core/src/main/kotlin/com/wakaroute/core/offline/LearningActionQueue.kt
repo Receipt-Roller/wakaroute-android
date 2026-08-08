@@ -40,6 +40,15 @@ class LearningActionQueue(
 
     suspend fun pending(): List<PendingAction> = mutex.withLock { store.read() }
 
+    /**
+     * Throws the queue away.
+     *
+     * Only for signing out of one account into another, where the entries
+     * belong to the identity being left behind. Sending them afterwards would
+     * file one student's work under another's name.
+     */
+    suspend fun clear() = mutex.withLock { store.write(emptyList()) }
+
     suspend fun markViewed(lessonId: String) =
         enqueue(PendingAction.MarkViewed(newId(), lessonId, now()))
 

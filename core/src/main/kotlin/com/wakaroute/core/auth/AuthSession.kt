@@ -40,6 +40,9 @@ class AuthSession(
     @Volatile
     private var session: Session? = null
 
+    /** The signed-in user id, once a token has been obtained. */
+    fun userId(): String? = session?.userId
+
     /**
      * A usable access token, registering the device if this is the first launch.
      *
@@ -72,8 +75,85 @@ class AuthSession(
         renewLocked().accessToken
     }
 
-    /** True once the device has registered and a secret exists to recover with. */
-    fun isRegistered(): Boolean = store.read(SecretStore.DEVICE_SECRET) != null
+    /**
+     * Whether an account already exists that this install can reach.
+     *
+     * Screens check this before fetching, because fetching is what *creates*
+     * an account — see [accessToken]. Getting it wrong in either direction is
+     * visible to the student: false when true hides their record, true when
+     * false registers a learner who was only browsing.
+     *
+     * **Both credentials count.** A device secret is the anonymous route in;
+     * a refresh token is the signed-in one, and [signIn] deliberately deletes
+     * the secret. Checking only the secret would tell a student who had just
+     * restored three years of work that they had none.
+     */
+    fun hasAccount(): Boolean =
+        store.read(SecretStore.DEVICE_SECRET) != null || store.read(SecretStore.REFRESH_TOKEN) != null
+
+    /**
+     * Attaches an email so the record survives a new phone.
+     *
+     * **The user id does not change.** This adds a way in; it does not move the
+     * account, so it is safe at any time and nothing needs migrating.
+     */
+    suspend fun linkAccount(
+        email: String,
+        password: String,
+        displayName: String = "",
+    ): AccountLink = client.link(
+        // Deliberately outside the mutex: this stores nothing, and taking the
+        // lock here would deadlock against the renewal that [accessToken] does.
+        accessToken = accessToken(),
+        email = email,
+        password = password,
+        displayName = displayName,
+    )
+
+    /**
+     * Signs in as a linked account, **replacing the one this install had**.
+     *
+     * Whatever this device recorded under its anonymous identity becomes
+     * unreachable the moment this succeeds. Anything not yet uploaded goes with
+     * it — so callers must deal with that first. [AccountHandover] does; do not
+     * call this directly from a screen.
+     *
+     * The device secret is cleared: this install is no longer the anonymous
+     * learner it registered as, and keeping the secret would let a later
+     * recovery silently switch back.
+     */
+    suspend fun signIn(email: String, password: String): Session = mutex.withLock {
+        val payload = client.signIn(email = email, password = password)
+
+        store.delete(SecretStore.DEVICE_SECRET)
+        store.delete(SecretStore.REFRESH_TOKEN)
+
+        persist(payload)
+    }
+
+    /**
+     * Closes the account and forgets every credential on this device.
+     *
+     * **The server is asked first.** Clearing local state first would leave an
+     * account on the server that the student can no longer reach — and so can
+     * no longer delete, which is the opposite of what they asked for.
+     *
+     * Irreversible. Callers go through [AccountDeletion], which also disposes
+     * of the records this device is still holding.
+     */
+    suspend fun deleteAccount() {
+        // Outside the mutex: obtaining the token may itself need a renewal, and
+        // the lock is not reentrant.
+        val token = accessToken()
+
+        client.deleteAccount(token)
+
+        mutex.withLock {
+            store.delete(SecretStore.DEVICE_SECRET)
+            store.delete(SecretStore.REFRESH_TOKEN)
+            session = null
+        }
+    }
 
     /**
      * Renewal, in the order that survives each step failing.

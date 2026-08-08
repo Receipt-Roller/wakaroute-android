@@ -80,3 +80,21 @@ data class Session(
         const val EXPIRY_MARGIN_SECONDS = 60L
     }
 }
+
+@Serializable
+data class LinkAccountRequest(
+    val email: String,
+    val password: String,
+    val displayName: String = "",
+)
+
+/** The answer to `POST /api/v1/me/link`. The user id does not change. */
+@Serializable
+data class AccountLink(
+    val userId: String = "",
+    val email: String = "",
+    val message: String = "",
+)
+
+@Serializable
+data class SignInRequest(val email: String, val password: String)
