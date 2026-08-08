@@ -1,6 +1,7 @@
 package com.wakaroute.app.data
 
 import com.wakaroute.core.map.LiveUnderstandingMap
+import com.wakaroute.core.map.PrerequisiteGraphSync
 import com.wakaroute.core.map.SchoolSubject
 import com.wakaroute.core.map.SubjectMapState
 import com.wakaroute.core.map.UnderstandingMapRepository
@@ -20,7 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 class UnderstandingMapState(
     private val bundled: UnderstandingMapRepository,
     private val live: LiveUnderstandingMap,
-    private val isRegistered: () -> Boolean,
+    private val hasAccount: () -> Boolean,
+    private val graphs: PrerequisiteGraphSync? = null,
 ) {
     private val _states = MutableStateFlow(bundled.allStates())
 
@@ -31,13 +33,33 @@ class UnderstandingMapState(
         _states.value.firstOrNull { it.first == subject }?.second ?: bundled.state(subject)
 
     /**
+     * Fetches the published prerequisite graphs.
+     *
+     * **Not gated on having an account, unlike the record below.** The graphs
+     * are content structure, not learner data, and they are fetched
+     * unauthenticated — so this cannot create a MANABU2 learner the way an
+     * authenticated call would. Gating it would mean a student who has never
+     * registered never sees a 教科 go live.
+     *
+     * Failure is silent on purpose: no network, or an endpoint that does not
+     * exist yet, both mean 「いま持っているものを使う」.
+     */
+    suspend fun refreshPublishedGraphs() {
+        val sync = graphs ?: return
+        sync.refresh()
+
+        // Re-read: a 教科 whose edges have just arrived stops being 準備中.
+        _states.value = bundled.allStates()
+    }
+
+    /**
      * Replaces the bundled structure with the live one where it can.
      *
      * Per subject rather than all-or-nothing: 数学 succeeding should not wait on
      * anything, and the four 準備中 教科 cost no request at all.
      */
-    suspend fun refreshIfRegistered() {
-        if (!isRegistered()) return
+    suspend fun refreshIfAccountExists() {
+        if (!hasAccount()) return
 
         _states.value = _states.value.map { (subject, current) ->
             subject to if (current is SubjectMapState.Available) live.load(subject) else current

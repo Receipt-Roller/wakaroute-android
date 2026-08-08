@@ -6,7 +6,7 @@ import org.junit.Test
 
 class UnderstandingMapRepositoryTest {
 
-    private val repository = BundledUnderstandingMapRepository()
+    private val repository = bundledUnderstandingMap()
 
     @Test
     fun `math is available`() {

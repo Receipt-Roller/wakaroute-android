@@ -74,28 +74,27 @@ interface UnderstandingMapRepository {
  *
  * Correct on its own before an account exists, and the fallback when the
  * network is unreachable — the 要素 and their prerequisites are worth reading
- * even offline, which is why they are bundled rather than fetched.
+ * even offline.
  *
- * 数学 only. The other four 教科 have content but no authored edges, and they
- * are reported [SubjectMapState.ComingSoon] rather than handed an empty graph.
+ * Which graph it gets is [catalogue]'s decision, not this class's. That is what
+ * lets 国語・英語・理科・社会 appear when their edges are published rather than
+ * when the next APK ships.
  */
-class BundledUnderstandingMapRepository(
+class GraphUnderstandingMapRepository(
+    private val catalogue: PrerequisiteGraphCatalogue = BundledGraphCatalogue(),
     private val progress: LearnerProgress = LearnerProgress.NotConnected,
 ) : UnderstandingMapRepository {
 
-    private val cache = mutableMapOf<SchoolSubject, SubjectMapState>()
+    override fun state(subject: SchoolSubject): SubjectMapState {
+        val graph = catalogue.graph(subject) ?: return SubjectMapState.ComingSoon
 
-    override fun state(subject: SchoolSubject): SubjectMapState =
-        cache.getOrPut(subject) { load(subject) }
-
-    private fun load(subject: SchoolSubject): SubjectMapState {
-        val resource = graphResources[subject] ?: return SubjectMapState.ComingSoon
-
-        val graph = try {
-            PrerequisiteGraph.bundled(resource)
-        } catch (e: Exception) {
-            return SubjectMapState.Unavailable(listOf(e.message ?: "graph could not be read"))
-        }
+        // **Content being ready is not the same as edges being authored.**
+        // A graph can list every 要素 in 国語 and say nothing about what depends
+        // on what — and with no edges every 要素 is `Ready`, so the screens would
+        // answer 「どこからでも学べます／つまずきはありません」 for a 教科 nobody has
+        // mapped. That is the one thing this map must never say, so a graph
+        // without a single prerequisite is treated as not authored yet.
+        if (graph.elements.none { it.requires.isNotEmpty() }) return SubjectMapState.ComingSoon
 
         // Validated at load as well as in tests. The ids belong to another
         // system, and a course deleted there must fail loudly rather than
@@ -109,14 +108,8 @@ class BundledUnderstandingMapRepository(
             asOf = graph.asOf,
         )
     }
-
-    companion object {
-        /**
-         * 数学 is the only 教科 with authored edges. Adding a key here without
-         * the corresponding reviewed graph would silently publish a wrong map,
-         * so this list and `core/src/main/resources/graphs` are meant to be
-         * read together.
-         */
-        val graphResources = mapOf(SchoolSubject.Math to "prerequisites-math")
-    }
 }
+
+/** The app's own graphs, with nothing fetched. Previews, tests, first launch. */
+fun bundledUnderstandingMap(progress: LearnerProgress = LearnerProgress.NotConnected) =
+    GraphUnderstandingMapRepository(BundledGraphCatalogue(), progress)

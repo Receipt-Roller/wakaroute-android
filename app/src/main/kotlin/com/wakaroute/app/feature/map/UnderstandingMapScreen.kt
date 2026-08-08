@@ -54,7 +54,12 @@ fun UnderstandingMapScreen(
     // Structure first, the student's record after. Only if this device already
     // has an account — the first authenticated call is what creates a MANABU2
     // learner, and opening a map must not do that.
-    LaunchedEffect(Unit) { mapState.refreshIfRegistered() }
+    LaunchedEffect(Unit) {
+        // Graphs first: a 教科 whose edges have just been published stops being
+        // 準備中 before the record is layered on. Needs no account.
+        mapState.refreshPublishedGraphs()
+        mapState.refreshIfAccountExists()
+    }
 
     Column(
         modifier = Modifier

@@ -24,7 +24,15 @@ import com.wakaroute.core.net.ApiError
  */
 class LiveUnderstandingMap(
     private val content: ContentClient,
-    private val bundled: UnderstandingMapRepository = BundledUnderstandingMapRepository(),
+    private val structure: UnderstandingMapRepository = bundledUnderstandingMap(),
+    /**
+     * The same catalogue [structure] draws from.
+     *
+     * Passed rather than looked up, so a 教科 published at runtime is overlaid
+     * with live titles like any other. Reaching for the bundled resource map
+     * here — as this once did — silently limits the live layer to 数学.
+     */
+    private val catalogue: PrerequisiteGraphCatalogue = BundledGraphCatalogue(),
 ) {
     /** Course titles and the set of ids that really exist, held for the session. */
     private var liveContent: LiveContent? = null
@@ -43,23 +51,17 @@ class LiveUnderstandingMap(
      * because those are different things and only one of them is about them.
      */
     suspend fun load(subject: SchoolSubject): SubjectMapState {
-        val structure = bundled.state(subject)
-        if (structure !is SubjectMapState.Available) return structure
+        val current = structure.state(subject)
+        if (current !is SubjectMapState.Available) return current
 
-        val graph = try {
-            PrerequisiteGraph.bundled(
-                BundledUnderstandingMapRepository.graphResources[subject] ?: return structure,
-            )
-        } catch (e: Exception) {
-            return structure
-        }
+        val graph = catalogue.graph(subject) ?: return current
 
         val live = try {
             liveContent ?: fetchLiveContent(graph).also { liveContent = it }
         } catch (e: ApiError) {
             // The structure is still worth reading, and it is bundled — this
             // screen works on a train. Titles fall back to the authored ones.
-            return structure.copy(progress = LearnerProgress.Unavailable)
+            return current.copy(progress = LearnerProgress.Unavailable)
         }
 
         // The graph says a 要素 exists that MANABU2 no longer has. Half a
