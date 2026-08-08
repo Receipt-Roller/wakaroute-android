@@ -1,8 +1,8 @@
 package com.wakaroute.app.data
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.wakaroute.core.auth.SecretStore
@@ -35,10 +35,10 @@ class KeystoreSecretStore(context: Context) : SecretStore {
     override fun read(key: String): String? = preferences.getString(key, null)
 
     /**
-     * `commit()`, and lint's advice to use `apply()` is suppressed rather than
-     * followed.
+     * `commit = true`, deliberately — not `apply()`.
      *
-     * That advice is right for ordinary preferences and wrong here. The device
+     * The default is asynchronous, and that is right for ordinary preferences
+     * and wrong here. The device
      * secret is returned by the server exactly once. An asynchronous write that
      * loses a race with process death leaves an account on the server that this
      * install can never prove it owns — no error, no retry, and nothing to
@@ -48,14 +48,12 @@ class KeystoreSecretStore(context: Context) : SecretStore {
      * The same reasoning covers deletion: a spent refresh token that survives
      * because its removal was still queued is a token that can be replayed.
      */
-    @SuppressLint("ApplySharedPref")
     override fun write(key: String, value: String) {
-        preferences.edit().putString(key, value).commit()
+        preferences.edit(commit = true) { putString(key, value) }
     }
 
-    @SuppressLint("ApplySharedPref")
     override fun delete(key: String) {
-        preferences.edit().remove(key).commit()
+        preferences.edit(commit = true) { remove(key) }
     }
 
     private companion object {

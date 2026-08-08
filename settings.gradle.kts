@@ -12,6 +12,22 @@ pluginManagement {
     }
 }
 
+/**
+ * Downloads the JDK the build asks for, instead of requiring the developer to
+ * already have it.
+ *
+ * `core` pins a Java 17 toolchain on purpose (see its build file). Without this
+ * plugin that pin means "fail unless a JDK 17 happens to be installed", which
+ * turns an Android Studio upgrade into a build that cannot run at all — Studio
+ * 2026.1 ships JBR 25, and a fresh machine has whatever it has.
+ *
+ * With it, the toolchain is a property of the build rather than of the laptop,
+ * and CI needs no JDK setup step either.
+ */
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

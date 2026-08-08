@@ -1,10 +1,13 @@
 [versions]
-# Pinned to what the team's Android Studio supports, not to the newest release.
-# 8.6.0 is the floor for compileSdk 35 and its default build-tools is 34.0.0,
-# so nothing here needs a newer one. Raising it means raising Studio first —
-# a whole-machine change for no gain, so it is a deliberate decision rather
-# than something to do because a version check went red.
-agp = "8.6.0"
+# 8.11 is the **lowest** line that supports compileSdk 36, and 36 is not
+# optional: Google Play requires targetSdk 36 for new apps and updates alike
+# from 2026-08-31. AGP 8.9 and below cap out at API 35.
+#
+# The lowest deliberately, because each AGP line raises the Android Studio
+# floor with it — 8.11 asks for Meerkat (2024.3.1), where 8.13 would ask for
+# Otter. Studio only has to *open* the project; Gradle builds from the CLI
+# whatever version is installed. See docs/play-store-submission.md.
+agp = "8.11.2"
 kotlin = "2.0.21"
 coroutines = "1.9.0"
 serialization = "1.7.3"
