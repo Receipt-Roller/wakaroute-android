@@ -21,7 +21,7 @@ private val BlueLight = Color(0xFF9FCAF3)
 private val Amber = Color(0xFF9A5B00)
 private val AmberLight = Color(0xFFFFB868)
 
-private val LightScheme = lightColorScheme(
+internal val LightScheme = lightColorScheme(
     primary = Blue,
     onPrimary = Color.White,
     primaryContainer = Color(0xFFD3E4FF),
@@ -46,7 +46,7 @@ private val LightScheme = lightColorScheme(
     onErrorContainer = Color(0xFF410006),
 )
 
-private val DarkScheme = darkColorScheme(
+internal val DarkScheme = darkColorScheme(
     primary = BlueLight,
     onPrimary = Color(0xFF00325B),
     primaryContainer = Color(0xFF004880),
