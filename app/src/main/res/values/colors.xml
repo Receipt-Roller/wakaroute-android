@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launch_background">#FFFBFF</color>
-    <color name="ic_launcher_background">#1B5E9C</color>
+    <!-- ワカルート のブランド色。ロゴの地の色そのものです。 -->
+    <color name="ic_launcher_background">#173F3A</color>
 </resources>
