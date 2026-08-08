@@ -26,7 +26,7 @@ class TargetSchoolsState(
      * whole of what this class needs from auth, and saying so keeps the two
      * from growing into each other.
      */
-    private val isRegistered: () -> Boolean,
+    private val hasAccount: () -> Boolean,
 ) {
     private val _state = MutableStateFlow<TargetSchoolsUi>(TargetSchoolsUi.NotRegistered)
     val state: StateFlow<TargetSchoolsUi> = _state.asStateFlow()
@@ -45,8 +45,8 @@ class TargetSchoolsState(
      * behaviour for anyone who uses the feature and skips it for everyone else.
      * Raised in AB rather than done quietly.
      */
-    suspend fun refreshIfRegistered() {
-        if (!isRegistered()) {
+    suspend fun refreshIfAccountExists() {
+        if (!hasAccount()) {
             _state.value = TargetSchoolsUi.NotRegistered
             return
         }

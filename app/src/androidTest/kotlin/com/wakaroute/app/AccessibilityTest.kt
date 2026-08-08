@@ -12,7 +12,7 @@ import com.wakaroute.app.ui.theme.WakaRouteTheme
 import com.wakaroute.app.data.UnderstandingMapState
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
-import com.wakaroute.core.map.BundledUnderstandingMapRepository
+import com.wakaroute.core.map.bundledUnderstandingMap
 import com.wakaroute.core.map.LiveUnderstandingMap
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.HttpRequest
@@ -40,14 +40,14 @@ class AccessibilityTest {
     val rule = createComposeRule()
 
     private fun setMapScreen() {
-        val bundled = BundledUnderstandingMapRepository()
+        val bundled = bundledUnderstandingMap()
         val state = UnderstandingMapState(
             bundled = bundled,
             live = LiveUnderstandingMap(ContentClient(NoNetwork, AppEnvironment.Production), bundled),
             // No account, so the bundled structure is what the screen shows and
             // nothing reaches the network — which is also what a student sees
             // before they have done anything.
-            isRegistered = { false },
+            hasAccount = { false },
         )
 
         rule.setContent {

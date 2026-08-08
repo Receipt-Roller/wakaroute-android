@@ -12,7 +12,6 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.AccountTree
@@ -70,7 +69,10 @@ fun HomeScreen(
     val mapStates by services.understandingMap.states.collectAsStateWithLifecycle()
     val mathState = mapStates.firstOrNull { it.first == SchoolSubject.Math }?.second
 
-    LaunchedEffect(Unit) { services.understandingMap.refreshIfRegistered() }
+    LaunchedEffect(Unit) {
+        services.understandingMap.refreshPublishedGraphs()
+        services.understandingMap.refreshIfAccountExists()
+    }
 
     Column(
         modifier = Modifier
@@ -163,7 +165,7 @@ private fun TargetSchoolsSection(
 ) {
     val state by services.targetSchools.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { services.targetSchools.refreshIfRegistered() }
+    LaunchedEffect(Unit) { services.targetSchools.refreshIfAccountExists() }
 
     when (val current = state) {
         // Before any account exists, and while loading. Both draw the same
@@ -295,7 +297,6 @@ private fun PreparingSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PreparingRow(Icons.Filled.PhoneAndroid, "機種変更のときの引き継ぎ")
             PreparingRow(Icons.Filled.Notifications, "学習リマインダー")
             PreparingRow(Icons.Filled.People, "保護者との連携")
         }

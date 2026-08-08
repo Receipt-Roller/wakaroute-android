@@ -29,8 +29,12 @@ jobs:
       # Runs on the JVM with no emulator, which is why the rules live in
       # `core`. This is where the prerequisite graph is validated: a cycle or a
       # dangling edge fails the build rather than reaching a student's map.
+      #
+      # `:app:testDebugUnitTest` is here for the colour-contrast check. Dark
+      # theme is the one nobody develops in, and a ratio does not depend on the
+      # display it was eyeballed on.
       - name: Unit tests
-        run: ./gradlew :core:test
+        run: ./gradlew :core:test :app:testDebugUnitTest
 
       - name: Lint
         run: ./gradlew :app:lintDebug
@@ -48,4 +52,5 @@ jobs:
           name: test-report
           path: |
             core/build/reports/tests/test
+            app/build/reports/tests/testDebugUnitTest
             app/build/reports/lint-results-debug.html

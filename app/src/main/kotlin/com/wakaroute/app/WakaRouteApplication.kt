@@ -4,12 +4,18 @@ import android.app.Application
 import com.wakaroute.app.data.KeystoreSecretStore
 import com.wakaroute.app.data.TargetSchoolsState
 import com.wakaroute.app.data.UnderstandingMapState
+import com.wakaroute.core.auth.AccountDeletion
+import com.wakaroute.core.auth.AccountHandover
 import com.wakaroute.core.auth.AuthSession
 import com.wakaroute.core.auth.DeviceAuthClient
 import com.wakaroute.core.auth.StoredDeviceIdProvider
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.goals.HttpTargetSchoolsRepository
-import com.wakaroute.core.map.BundledUnderstandingMapRepository
+import com.wakaroute.core.map.FilePrerequisiteGraphStore
+import com.wakaroute.core.map.GraphUnderstandingMapRepository
+import com.wakaroute.core.map.PrerequisiteGraphClient
+import com.wakaroute.core.map.PrerequisiteGraphSync
+import com.wakaroute.core.map.PublishedGraphCatalogue
 import com.wakaroute.core.map.LiveUnderstandingMap
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.net.AuthenticatedHttpClient
@@ -49,13 +55,10 @@ class AppServices(
     val understandingMap: UnderstandingMapState,
     val preferences: AppPreferences,
     /**
-     * Phase 2's foundation, assembled but **not yet used by any screen**.
-     *
-     * Registration happens on the first call to `accessToken()`, and nothing
-     * calls it today. That is deliberate: the app would otherwise create a
-     * MANABU2 learner account for every install while there is still no
-     * feature that writes anything to it. The account arrives with the screen
-     * that needs it.
+     * Registration happens on the first call to `accessToken()`, which is why
+     * no screen calls it merely to look at something. The app would otherwise
+     * create a MANABU2 learner account for every install that only ever
+     * browsed. The account arrives with the first thing worth saving.
      */
     val auth: AuthSession,
     /** Use this for every MANABU2 call. It is the only path that renews safely. */
@@ -63,6 +66,19 @@ class AppServices(
     val profile: ProfileClient,
     val content: ContentClient,
     val actionQueue: LearningActionQueue,
+    /**
+     * Linking and signing in.
+     *
+     * Screens go through this rather than [auth] directly: signing in strands
+     * anything still in [actionQueue], and this is what knows to deal with
+     * that first.
+     */
+    val handover: AccountHandover,
+    /**
+     * 学習記録の削除 — required by App Store Review 5.1.1(v) and Google Play's
+     * data-deletion policy, because first launch creates an account.
+     */
+    val accountDeletion: AccountDeletion,
     val studyTimer: StudyTimer,
     val targetSchools: TargetSchoolsState,
 ) {
@@ -93,20 +109,32 @@ class AppServices(
                 // token, and going through the authenticated client would make
                 // browsing schools depend on registration having succeeded.
                 schools = HttpSchoolsRepository(http, environment),
-                // Phase 1 has no learner data of any kind, so the map is the
-                // authored graph and an empty record. See
-                // BundledUnderstandingMapRepository for why that is stated
-                // rather than filled in.
+                // 数学 is bundled; the other four 教科 appear when their edges
+                // are published, without a release. See PublishedGraphCatalogue.
                 understandingMap = run {
-                    val bundled = BundledUnderstandingMapRepository()
+                    val graphStore = FilePrerequisiteGraphStore(
+                        File(application.filesDir, "prerequisite-graphs.json"),
+                    )
+                    val catalogue = PublishedGraphCatalogue(graphStore)
+                    val structure = GraphUnderstandingMapRepository(catalogue)
+
                     UnderstandingMapState(
-                        bundled = bundled,
-                        live = LiveUnderstandingMap(content, bundled),
-                        isRegistered = auth::isRegistered,
+                        bundled = structure,
+                        live = LiveUnderstandingMap(content, structure, catalogue),
+                        hasAccount = auth::hasAccount,
+                        // Unauthenticated, like the school catalogue: the
+                        // prerequisite structure is not learner data, and
+                        // fetching it must not create an account.
+                        graphs = PrerequisiteGraphSync(
+                            PrerequisiteGraphClient(http, environment),
+                            graphStore,
+                        ),
                     )
                 },
                 content = content,
                 actionQueue = queue,
+                handover = AccountHandover(auth, queue),
+                accountDeletion = AccountDeletion(auth, queue),
                 studyTimer = StudyTimer(queue),
                 preferences = AppPreferences(application),
                 auth = auth,
@@ -114,7 +142,7 @@ class AppServices(
                 profile = ProfileClient(authenticated, environment),
                 targetSchools = TargetSchoolsState(
                     repository = HttpTargetSchoolsRepository(authenticated, environment),
-                    isRegistered = auth::isRegistered,
+                    hasAccount = auth::hasAccount,
                 ),
             )
         }

@@ -50,13 +50,13 @@ private sealed interface LessonListState {
 fun LessonList(
     content: ContentClient,
     courseId: String,
-    isRegistered: () -> Boolean,
+    hasAccount: () -> Boolean,
     onOpenLesson: (String) -> Unit,
 ) {
     var state by remember(courseId) { mutableStateOf<LessonListState>(LessonListState.Loading) }
 
     LaunchedEffect(courseId) {
-        if (!isRegistered()) {
+        if (!hasAccount()) {
             state = LessonListState.NotRegistered
             return@LaunchedEffect
         }

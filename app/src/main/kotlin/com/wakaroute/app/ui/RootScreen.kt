@@ -35,6 +35,8 @@ import com.wakaroute.app.feature.learn.QuizScreen
 import com.wakaroute.app.feature.map.DomainScreen
 import com.wakaroute.app.feature.map.ElementScreen
 import com.wakaroute.app.feature.map.UnderstandingMapScreen
+import com.wakaroute.app.feature.more.HandoverMode
+import com.wakaroute.app.feature.more.HandoverScreen
 import com.wakaroute.app.feature.more.MoreScreen
 import com.wakaroute.app.feature.onboarding.IntroductionScreen
 import com.wakaroute.app.feature.schools.SchoolDetailScreen
@@ -68,6 +70,7 @@ object Routes {
     const val RECORD = "record"
     const val SCHOOLS = "schools"
     const val MORE = "more"
+    const val HANDOVER = "handover/{mode}"
     const val GOALS = "goals"
     const val LESSON = "lessons/{lessonId}"
     const val QUIZ = "lessons/{lessonId}/quiz"
@@ -89,6 +92,8 @@ object Routes {
     fun quiz(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}/quiz"
 
     fun document(document: BundledDocument) = "documents/${document.name}"
+
+    fun handover(mode: HandoverMode) = "handover/${mode.name}"
 }
 
 @Composable
@@ -190,7 +195,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         ElementScreen(
             mapState = services.understandingMap,
             content = services.content,
-            isRegistered = services.auth::isRegistered,
+            hasAccount = services.auth::hasAccount,
             onOpenLesson = { navController.navigate(Routes.lesson(it)) },
             subjectName = entry.arguments?.getString("subject").orEmpty(),
             domainCode = entry.arguments?.getString("domain").orEmpty(),
@@ -223,7 +228,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             timer = services.studyTimer,
             queue = services.actionQueue,
             content = services.content,
-            isRegistered = services.auth::isRegistered,
+            hasAccount = services.auth::hasAccount,
         )
     }
 
@@ -248,7 +253,18 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             environment = services.environment,
             auth = services.auth,
             profile = services.profile,
+            deletion = services.accountDeletion,
             onOpenDocument = { navController.navigate(Routes.document(it)) },
+            onLink = { navController.navigate(Routes.handover(HandoverMode.Link)) },
+            onSignIn = { navController.navigate(Routes.handover(HandoverMode.SignIn)) },
+        )
+    }
+
+    composable(Routes.HANDOVER) { entry ->
+        HandoverScreen(
+            handover = services.handover,
+            mode = HandoverMode.valueOf(entry.arguments?.getString("mode").orEmpty()),
+            onBack = navController::popBackStack,
         )
     }
 
