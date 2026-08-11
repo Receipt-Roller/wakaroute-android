@@ -135,6 +135,9 @@ object DocumentParser {
         .replace(BREAK_PATTERN, LINE_BREAK_SENTINEL)
         .replace(TAG_PATTERN, "")
         .let(::decodeEntities)
+        // After the tags are gone, because the maths arrives wrapped in
+        // <span class="math"> and it is the delimiters inside that matter.
+        .let(MathNotation::toReadableText)
         .replace(COLLAPSIBLE_SPACE, " ")
         .replace(LINE_BREAK_SENTINEL, "\n")
         .trim()
