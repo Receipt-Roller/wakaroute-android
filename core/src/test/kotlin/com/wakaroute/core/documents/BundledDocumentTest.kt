@@ -110,5 +110,7 @@ class BundledDocumentTest {
             (listOf(header) + rows).joinToString("\n") { row -> row.joinToString("\t") { it.plainText } }
         is DocumentBlock.Collapsible -> (summary.plainText + "\n" + body.joinToString("\n") { it.text() })
         is DocumentBlock.Figure -> listOfNotNull(title, description).joinToString("\n")
+        // The legal documents contain none, but the branch keeps this total.
+        is DocumentBlock.Interactive -> ""
     }
 }

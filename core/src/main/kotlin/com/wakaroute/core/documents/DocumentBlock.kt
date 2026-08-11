@@ -62,6 +62,19 @@ sealed interface DocumentBlock {
      * given, and it is also a usable fallback anywhere the drawing itself
      * cannot be rendered — the content survives either way.
      */
+    /**
+     * A widget the lesson drives with its own JavaScript.
+     *
+     * One lesson uses this today — 一次方程式 の「両辺に同じ数を足す・引く」, a
+     * balance scale whose beam tilts when the student takes 3 from one side.
+     * Rendered natively it loses the point: the diagram sits still and the
+     * buttons become text that does nothing.
+     *
+     * [html] is the authored fragment, verbatim. It is executed in a WebView
+     * that can reach nothing — see the renderer for what that means and why.
+     */
+    data class Interactive(val html: String) : DocumentBlock
+
     data class Figure(
         val svg: String,
         val title: String?,

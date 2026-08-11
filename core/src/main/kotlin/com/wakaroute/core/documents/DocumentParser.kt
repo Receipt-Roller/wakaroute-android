@@ -18,29 +18,48 @@ package com.wakaroute.core.documents
  */
 object DocumentParser {
 
-    fun parse(html: String): List<DocumentBlock> = parseBlocks(html)
+    fun parse(html: String): List<DocumentBlock> {
+        val interactive = InteractiveRegions.find(html)
+        if (interactive.isEmpty()) return parseBlocks(html)
 
-    private fun parseBlocks(html: String): List<DocumentBlock> {
-        val blocks = mutableListOf<DocumentBlock>()
+        // Merged by position so the widget keeps its place in the lesson. Its
+        // own <svg> and <p> are inside the skipped range, so the diagram and
+        // the buttons are not also drawn a second time as static blocks.
+        val positioned = parsePositioned(html, skip = interactive) +
+            interactive.map { it.first to DocumentBlock.Interactive(html.substring(it)) }
+
+        return positioned.sortedBy { it.first }.map { it.second }.filterNot { it.isBlank() }
+    }
+
+    private fun parseBlocks(html: String): List<DocumentBlock> =
+        parsePositioned(html, skip = emptyList()).map { it.second }.filterNot { it.isBlank() }
+
+    private fun parsePositioned(
+        html: String,
+        skip: List<IntRange>,
+    ): List<Pair<Int, DocumentBlock>> {
+        val blocks = mutableListOf<Pair<Int, DocumentBlock>>()
 
         for (match in BLOCK_PATTERN.findAll(html)) {
+            if (skip.any { match.range.first in it }) continue
             val tag = match.groupValues[1].lowercase()
             // `<svg …/>` and paired tags come through different groups.
             val inner = match.groupValues.getOrElse(2) { "" }
 
+            val at = match.range.first
             when (tag) {
-                "h1" -> blocks += DocumentBlock.Title(inlineSpans(inner))
-                "h2", "h3", "h4" -> blocks += DocumentBlock.Heading(inlineSpans(inner))
-                "p" -> blocks += DocumentBlock.Paragraph(inlineSpans(inner))
-                "ul" -> listItems(inner)?.let { blocks += DocumentBlock.BulletList(it) }
-                "ol" -> listItems(inner)?.let { blocks += DocumentBlock.NumberedList(it) }
-                "table" -> table(inner)?.let { blocks += it }
-                "details" -> blocks += collapsible(inner)
-                "svg" -> blocks += figure(match.value)
+                "h1" -> blocks += at to DocumentBlock.Title(inlineSpans(inner))
+                "h2", "h3", "h4" -> blocks += at to DocumentBlock.Heading(inlineSpans(inner))
+                "p" -> blocks += at to DocumentBlock.Paragraph(inlineSpans(inner))
+                "ul" -> listItems(inner)?.let { blocks += at to DocumentBlock.BulletList(it) }
+                "ol" -> listItems(inner)?.let { blocks += at to DocumentBlock.NumberedList(it) }
+                "table" -> table(inner)?.let { blocks += at to it }
+                "details" -> blocks += at to collapsible(inner)
+                "svg" -> blocks += at to figure(match.value)
             }
         }
 
-        return blocks.filterNot { it.isBlank() }
+        return blocks
     }
 
     private fun listItems(inner: String): List<List<InlineSpan>>? =
@@ -160,6 +179,7 @@ object DocumentParser {
         is DocumentBlock.Table -> header.isEmpty() && rows.isEmpty()
         is DocumentBlock.Collapsible -> summary.plainText.isBlank() && body.isEmpty()
         is DocumentBlock.Figure -> svg.isBlank()
+        is DocumentBlock.Interactive -> html.isBlank()
     }
 
     /**

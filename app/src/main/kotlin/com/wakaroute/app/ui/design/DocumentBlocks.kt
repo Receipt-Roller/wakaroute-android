@@ -80,6 +80,7 @@ fun DocumentBlockView(block: DocumentBlock, modifier: Modifier = Modifier) {
         is DocumentBlock.Table -> TableView(block, modifier)
         is DocumentBlock.Collapsible -> CollapsibleView(block, modifier)
         is DocumentBlock.Figure -> FigureView(block, modifier)
+        is DocumentBlock.Interactive -> InteractiveView(block.html, modifier)
     }
 }
 
