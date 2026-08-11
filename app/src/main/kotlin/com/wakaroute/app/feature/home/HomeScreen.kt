@@ -71,7 +71,7 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         services.understandingMap.refreshPublishedGraphs()
-        services.understandingMap.refreshIfAccountExists()
+        services.understandingMap.refreshProgress()
     }
 
     Column(
@@ -165,13 +165,13 @@ private fun TargetSchoolsSection(
 ) {
     val state by services.targetSchools.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { services.targetSchools.refreshIfAccountExists() }
+    LaunchedEffect(Unit) { services.targetSchools.refresh() }
 
     when (val current = state) {
         // Before any account exists, and while loading. Both draw the same
         // invitation rather than a spinner: there is nothing a student needs to
         // wait for, and a spinner on the first screen reads as a fault.
-        TargetSchoolsUi.NotRegistered, TargetSchoolsUi.Loading ->
+        TargetSchoolsUi.Loading ->
             TargetSchoolsInvitation(onOpenSchools)
 
         is TargetSchoolsUi.Failed -> Surface(

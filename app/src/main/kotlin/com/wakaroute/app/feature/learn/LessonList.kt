@@ -29,7 +29,6 @@ import com.wakaroute.core.net.ApiError
 
 private sealed interface LessonListState {
     /** No account yet, so there is nothing to fetch and nothing to create. */
-    data object NotRegistered : LessonListState
     data object Loading : LessonListState
     data class Loaded(val lessons: List<LessonSummary>, val progress: CourseProgressDetail?) : LessonListState
     data object Failed : LessonListState
@@ -43,24 +42,19 @@ private sealed interface LessonListState {
  * takes for its first three steps — building a second one would give the same
  * place two doors and let them drift apart.
  *
- * Only loaded when the device already has an account, for the same reason as
- * everywhere else: the first authenticated call creates a MANABU2 learner.
+ * The content endpoints are authenticated, so this needs a token — the account
+ * is created at launch, and [AuthSession] registers again if that first attempt
+ * failed. A student who opens a lesson gets the lesson.
  */
 @Composable
 fun LessonList(
     content: ContentClient,
     courseId: String,
-    hasAccount: () -> Boolean,
     onOpenLesson: (String) -> Unit,
 ) {
     var state by remember(courseId) { mutableStateOf<LessonListState>(LessonListState.Loading) }
 
     LaunchedEffect(courseId) {
-        if (!hasAccount()) {
-            state = LessonListState.NotRegistered
-            return@LaunchedEffect
-        }
-
         state = try {
             val course = content.courseDetail(courseId)
             // Progress is a second request and a lesser one: without it the
@@ -76,7 +70,6 @@ fun LessonList(
         Text(text = "レッスン", style = MaterialTheme.typography.titleMedium)
 
         when (val current = state) {
-            LessonListState.NotRegistered -> Note("レッスンはまだ読み込んでいません。")
             LessonListState.Loading -> Note("読み込んでいます…")
             LessonListState.Failed -> Note("レッスンを読み込めませんでした。")
 

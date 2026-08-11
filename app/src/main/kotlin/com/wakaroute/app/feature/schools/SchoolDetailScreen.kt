@@ -220,7 +220,7 @@ private fun TargetSchoolButton(detail: SchoolDetail, targetSchools: TargetSchool
     var working by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { targetSchools.refreshIfAccountExists() }
+    LaunchedEffect(Unit) { targetSchools.refresh() }
 
     val loaded = state as? TargetSchoolsUi.Loaded
     val isTarget = loaded?.list?.contains(detail.school.id) == true

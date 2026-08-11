@@ -14,14 +14,12 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * The bundled structure is available with no network and no account, so the
  * screen draws immediately and stays useful on a train. The learner's record is
- * layered on afterwards **only if this device already has an account** — the
- * same guard as 志望校, and for the same reason: the first authenticated call is
- * what creates a MANABU2 learner, and opening a map should not do that.
+ * layered on afterwards, and a failure to fetch it costs the record — never the
+ * structure.
  */
 class UnderstandingMapState(
     private val bundled: UnderstandingMapRepository,
     private val live: LiveUnderstandingMap,
-    private val hasAccount: () -> Boolean,
     private val graphs: PrerequisiteGraphSync? = null,
 ) {
     private val _states = MutableStateFlow(bundled.allStates())
@@ -58,9 +56,7 @@ class UnderstandingMapState(
      * Per subject rather than all-or-nothing: 数学 succeeding should not wait on
      * anything, and the four 準備中 教科 cost no request at all.
      */
-    suspend fun refreshIfAccountExists() {
-        if (!hasAccount()) return
-
+    suspend fun refreshProgress() {
         _states.value = _states.value.map { (subject, current) ->
             subject to if (current is SubjectMapState.Available) live.load(subject) else current
         }

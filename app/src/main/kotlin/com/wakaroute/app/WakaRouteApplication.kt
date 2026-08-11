@@ -1,6 +1,10 @@
 package com.wakaroute.app
 
 import android.app.Application
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import com.wakaroute.app.data.KeystoreSecretStore
 import com.wakaroute.app.data.TargetSchoolsState
 import com.wakaroute.app.data.UnderstandingMapState
@@ -46,6 +50,28 @@ class WakaRouteApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         services = AppServices.live(this)
+        registerInBackground()
+    }
+
+    /**
+     * Creates the learner account at launch, as iOS does.
+     *
+     * Every screen that shows a student's own work needs a token, and the
+     * content endpoints are authenticated — `GET /courses/{id}` is a 401
+     * without one. Registering lazily meant a student who opened a lesson
+     * before registering a 志望校 was told 「レッスンはまだ読み込んでいません」,
+     * with nothing on screen to tell them why or what to do. 志望校 as the
+     * trigger was arbitrary; the two apps now behave the same way.
+     *
+     * Fire-and-forget on purpose. A first launch with no signal must not block
+     * or crash — [AuthSession] registers again on the next call that needs a
+     * token, so the only cost of failing here is that the first screen to want
+     * learner data pays for it.
+     */
+    private fun registerInBackground() {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            runCatching { services.auth.accessToken() }
+        }
     }
 }
 
@@ -54,12 +80,7 @@ class AppServices(
     val schools: SchoolsRepository,
     val understandingMap: UnderstandingMapState,
     val preferences: AppPreferences,
-    /**
-     * Registration happens on the first call to `accessToken()`, which is why
-     * no screen calls it merely to look at something. The app would otherwise
-     * create a MANABU2 learner account for every install that only ever
-     * browsed. The account arrives with the first thing worth saving.
-     */
+    /** Registered at launch — see [WakaRouteApplication.onCreate]. */
     val auth: AuthSession,
     /** Use this for every MANABU2 call. It is the only path that renews safely. */
     val authenticatedHttp: HttpClient,
@@ -121,7 +142,6 @@ class AppServices(
                     UnderstandingMapState(
                         bundled = structure,
                         live = LiveUnderstandingMap(content, structure, catalogue),
-                        hasAccount = auth::hasAccount,
                         // Unauthenticated, like the school catalogue: the
                         // prerequisite structure is not learner data, and
                         // fetching it must not create an account.
@@ -142,7 +162,6 @@ class AppServices(
                 profile = ProfileClient(authenticated, environment),
                 targetSchools = TargetSchoolsState(
                     repository = HttpTargetSchoolsRepository(authenticated, environment),
-                    hasAccount = auth::hasAccount,
                 ),
             )
         }

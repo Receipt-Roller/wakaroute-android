@@ -58,7 +58,7 @@ fun UnderstandingMapScreen(
         // Graphs first: a 教科 whose edges have just been published stops being
         // 準備中 before the record is layered on. Needs no account.
         mapState.refreshPublishedGraphs()
-        mapState.refreshIfAccountExists()
+        mapState.refreshProgress()
     }
 
     Column(

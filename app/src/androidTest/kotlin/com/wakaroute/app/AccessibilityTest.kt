@@ -14,8 +14,10 @@ import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.map.bundledUnderstandingMap
 import com.wakaroute.core.map.LiveUnderstandingMap
+import com.wakaroute.core.net.ApiError
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.HttpRequest
+import com.wakaroute.core.net.HttpResponse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,10 +46,6 @@ class AccessibilityTest {
         val state = UnderstandingMapState(
             bundled = bundled,
             live = LiveUnderstandingMap(ContentClient(NoNetwork, AppEnvironment.Production), bundled),
-            // No account, so the bundled structure is what the screen shows and
-            // nothing reaches the network — which is also what a student sees
-            // before they have done anything.
-            hasAccount = { false },
         )
 
         rule.setContent {
@@ -57,10 +55,15 @@ class AccessibilityTest {
         }
     }
 
-    /** Fails loudly if the screen ever tries to fetch. */
+    /**
+     * Unreachable, as on a train.
+     *
+     * The screen is allowed to try — the record is fetched now that every
+     * install has an account. What these tests assert is that failing to reach
+     * it costs the record and never the structure, which is bundled.
+     */
     private object NoNetwork : HttpClient {
-        override suspend fun send(request: HttpRequest) =
-            throw AssertionError("the map must draw from the bundle: ${request.url}")
+        override suspend fun send(request: HttpRequest): HttpResponse = throw ApiError.Offline
     }
 
     @Test

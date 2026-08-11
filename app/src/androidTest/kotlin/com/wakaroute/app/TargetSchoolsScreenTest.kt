@@ -37,7 +37,7 @@ class TargetSchoolsScreenTest {
 
     private fun setScreen(vararg names: String) {
         repository = FakeRepository(names.toList())
-        val state = TargetSchoolsState(repository, hasAccount = { true })
+        val state = TargetSchoolsState(repository)
 
         rule.setContent {
             WakaRouteTheme {

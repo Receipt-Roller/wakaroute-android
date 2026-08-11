@@ -68,7 +68,7 @@ fun TargetSchoolsScreen(
     var working by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { targetSchools.refreshIfAccountExists() }
+    LaunchedEffect(Unit) { targetSchools.refresh() }
 
     Scaffold(
         topBar = {
@@ -88,16 +88,10 @@ fun TargetSchoolsScreen(
                     CircularProgressIndicator()
                 }
 
-                TargetSchoolsUi.NotRegistered -> Message(
-                    body = "まだ志望校を登録していません。",
-                    actionLabel = "高校を探す",
-                    onAction = onFindSchools,
-                )
-
                 is TargetSchoolsUi.Failed -> Message(
                     body = "志望校を読み込めませんでした。${current.message}",
                     actionLabel = if (current.canRetry) "もう一度ためす" else null,
-                    onAction = { scope.launch { targetSchools.refreshIfAccountExists() } },
+                    onAction = { scope.launch { targetSchools.refresh() } },
                 )
 
                 is TargetSchoolsUi.Loaded -> if (current.list.isEmpty) {

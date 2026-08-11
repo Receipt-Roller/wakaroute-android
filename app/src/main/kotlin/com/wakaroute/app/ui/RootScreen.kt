@@ -195,7 +195,6 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         ElementScreen(
             mapState = services.understandingMap,
             content = services.content,
-            hasAccount = services.auth::hasAccount,
             onOpenLesson = { navController.navigate(Routes.lesson(it)) },
             subjectName = entry.arguments?.getString("subject").orEmpty(),
             domainCode = entry.arguments?.getString("domain").orEmpty(),
@@ -228,7 +227,6 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
             timer = services.studyTimer,
             queue = services.actionQueue,
             content = services.content,
-            hasAccount = services.auth::hasAccount,
         )
     }
 

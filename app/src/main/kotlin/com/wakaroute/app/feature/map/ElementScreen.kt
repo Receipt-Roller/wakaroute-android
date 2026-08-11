@@ -47,7 +47,6 @@ import java.net.URLDecoder
 fun ElementScreen(
     mapState: UnderstandingMapState,
     content: ContentClient,
-    hasAccount: () -> Boolean,
     subjectName: String,
     domainCode: String,
     elementId: String,
@@ -102,7 +101,6 @@ fun ElementScreen(
                 LessonList(
                     content = content,
                     courseId = element.id.value,
-                    hasAccount = hasAccount,
                     onOpenLesson = onOpenLesson,
                 )
 

@@ -48,7 +48,6 @@ fun StudyRecordScreen(
     timer: StudyTimer,
     queue: LearningActionQueue,
     content: ContentClient,
-    hasAccount: () -> Boolean,
 ) {
     val running by timer.running.collectAsStateWithLifecycle()
     var elapsed by remember { mutableStateOf(0) }
@@ -69,8 +68,6 @@ fun StudyRecordScreen(
     }
 
     LaunchedEffect(reload) {
-        if (!hasAccount()) return@LaunchedEffect
-
         try {
             val today = LocalDate.now()
             streak = content.studyStreak()
@@ -116,7 +113,7 @@ fun StudyRecordScreen(
                 )
             }
 
-            if (!hasAccount()) {
+            if (days?.isEmpty() != false && streak == null && !loadFailed) {
                 Text(
                     // Not 「まだ勉強していません」 — that would be a claim about the
                     // student. Nothing has been recorded because nothing has

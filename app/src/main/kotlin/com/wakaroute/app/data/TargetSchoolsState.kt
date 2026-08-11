@@ -26,9 +26,8 @@ class TargetSchoolsState(
      * whole of what this class needs from auth, and saying so keeps the two
      * from growing into each other.
      */
-    private val hasAccount: () -> Boolean,
 ) {
-    private val _state = MutableStateFlow<TargetSchoolsUi>(TargetSchoolsUi.NotRegistered)
+    private val _state = MutableStateFlow<TargetSchoolsUi>(TargetSchoolsUi.Loading)
     val state: StateFlow<TargetSchoolsUi> = _state.asStateFlow()
 
     /**
@@ -45,13 +44,7 @@ class TargetSchoolsState(
      * behaviour for anyone who uses the feature and skips it for everyone else.
      * Raised in AB rather than done quietly.
      */
-    suspend fun refreshIfAccountExists() {
-        if (!hasAccount()) {
-            _state.value = TargetSchoolsUi.NotRegistered
-            return
-        }
-        load()
-    }
+    suspend fun refresh() = load()
 
     suspend fun add(schoolId: String, name: String, examDate: String?) =
         mutate { repository.add(schoolId, name, examDate) }
@@ -122,9 +115,6 @@ class TargetSchoolsState(
 }
 
 sealed interface TargetSchoolsUi {
-    /** No account yet, so there is nothing to fetch and nothing to create. */
-    data object NotRegistered : TargetSchoolsUi
-
     data object Loading : TargetSchoolsUi
 
     data class Loaded(val list: TargetSchoolList) : TargetSchoolsUi
