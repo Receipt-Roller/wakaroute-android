@@ -100,4 +100,66 @@ class MathNotationTest {
             (blocks.single() as DocumentBlock.Paragraph).spans.joinToString("") { it.text },
         )
     }
+
+    // --- test questions: `$…$` --------------------------------------------
+
+    private fun test(text: String) = MathNotation.toReadableText(text, dollarDelimited = true)
+
+    @Test
+    fun `test questions use dollar delimiters`() {
+        assertEquals("2 点 (-1, 4) を通る", test("\$2\$ 点 \$(-1,\\ 4)\$ を通る"))
+    }
+
+    @Test
+    fun `dollars are left alone in lesson bodies`() {
+        // Opt-in only. A lesson may mention a price in dollars.
+        assertEquals("\$5 と \$8", MathNotation.toReadableText("\$5 と \$8"))
+    }
+
+    @Test
+    fun `a lone dollar is shown as written`() {
+        assertEquals("あと \$3", test("あと \$3"))
+    }
+
+    @Test
+    fun `squares are written the way a student writes them`() {
+        assertEquals("y = 3x²", test("\$y = 3x^{2}\$"))
+        assertEquals("(-2)² - 1", test("\$(-2)^{2} - 1\$"))
+        assertEquals("2³ × 5", test("\$2^{3} \\times 5\$"))
+    }
+
+    @Test
+    fun `an exponent with no superscript form stays readable`() {
+        assertEquals("a^(x+y)", test("\$a^{x+y}\$"))
+    }
+
+    @Test
+    fun `leqq is not read as leq followed by q`() {
+        assertEquals("1 ≦ x ≦ 5", test("\$1 \\leqq x \\leqq 5\$"))
+    }
+
+    @Test
+    fun `roots, angles and pi`() {
+        assertEquals("4√2", test("\$4\\sqrt{2}\$"))
+        assertEquals("∠A = 40°", test("\$\\angle A = 40°\$"))
+        assertEquals("△ABC", test("\$\\triangle ABC\$"))
+        assertEquals("2π", test("\$2\\pi\$"))
+        assertEquals("(1 ± √5)/2", test("\$\\dfrac{1 \\pm \\sqrt{5}}{2}\$"))
+    }
+
+    @Test
+    fun `a fraction followed by a term is bracketed`() {
+        // y = 1/2x² reads as 1/(2x²). Found in a production test question.
+        assertEquals("y = (1/2)x²", test("\$y = \\dfrac{1}{2}x^{2}\$"))
+        assertEquals("(1/3)√3", test("\$\\dfrac{1}{3}\\sqrt{3}\$"))
+        assertEquals("1/2 + x", test("\$\\dfrac{1}{2} + x\$"))
+    }
+
+    @Test
+    fun `a system of equations reads as its lines`() {
+        assertEquals(
+            "x + y = 3、x - y = 1",
+            test("\$\\begin{cases} x + y = 3 \\\\ x - y = 1 \\end{cases}\$"),
+        )
+    }
 }
