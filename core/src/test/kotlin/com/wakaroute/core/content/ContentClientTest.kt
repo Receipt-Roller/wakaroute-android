@@ -139,6 +139,62 @@ class ContentClientTest {
         assertEquals(true, detail.forLesson("lesson-passed")!!.latestQuizPassed)
     }
 
+    // --- tests (スタート診断) -----------------------------------------------
+
+    @Test
+    fun `the test list decodes, including a test attached to no path`() = runTest {
+        val tests = client(FakeApi(TEST_LIST)).tests()
+
+        assertEquals(2, tests.size)
+        assertEquals(900, tests[0].timeLimitSeconds)
+        assertEquals(36, tests[0].latestResult!!.scorePercent)
+        assertNull(tests[1].pathId)
+        assertNull("no limit is null, not zero", tests[1].timeLimitSeconds)
+    }
+
+    @Test
+    fun `a test decodes with optionText and no answer key`() = runTest {
+        val test = client(FakeApi(TEST_DETAIL)).testDetail("test-1")
+
+        assertEquals("いちばん大きい数はどれですか。", test.questions.single().questionText)
+        assertEquals(listOf("あ", "い"), test.questions.single().options.map { it.optionText })
+    }
+
+    @Test
+    fun `submitting a test sends the answers, the time and the caller's key`() = runTest {
+        val http = FakeApi(TEST_RESULT)
+        val result = client(http).submitTest(
+            testId = "test-1",
+            answers = listOf(TestAnswer("q1", "o2")),
+            elapsedSeconds = 420,
+            idempotencyKey = "key-1",
+        )
+
+        val request = http.requests.single()
+        assertTrue(request.url.endsWith("/api/v1/tests/test-1/submit"))
+        assertEquals("key-1", request.headers["Idempotency-Key"])
+        assertEquals(
+            """{"answers":[{"questionId":"q1","optionId":"o2"}],"elapsedSeconds":420}""",
+            request.body,
+        )
+        assertTrue(result.passedButOverTime)
+    }
+
+    @Test
+    fun `an empty test submission never leaves the device`() = runTest {
+        // The server records `answers: []` as a 0% failed attempt.
+        val http = FakeApi(TEST_RESULT)
+
+        try {
+            client(http).submitTest("test-1", emptyList(), elapsedSeconds = 1, idempotencyKey = "key-1")
+            fail("expected an empty submission to be rejected")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("0%"))
+        }
+
+        assertEquals(0, http.requests.size)
+    }
+
     // --- helpers -----------------------------------------------------------
 
     private fun client(http: HttpClient) = ContentClient(http, AppEnvironment.Production)
@@ -193,6 +249,37 @@ class ContentClientTest {
         const val QUIZ_RESULT = """
         {"attemptId":"attempt-1","quizId":"quiz-1","scorePercent":80,
          "passingScorePercent":60,"isPassed":true,"completedAt":"2026-08-05T10:00:00.1234567+00:00"}
+        """
+
+        const val TEST_LIST = """
+        [
+          {"id":"test-1","organizationId":"org-1","pathId":"path-1","title":"テスト診断 1/4",
+           "description":"説明です。","passingScorePercent":70,"isRequired":true,"culture":"ja-JP",
+           "questionCount":14,"timeLimitSeconds":900,
+           "latestResult":{"resultId":"r1","testId":"test-1","scorePercent":36,"passingScorePercent":70,
+                           "isPassed":false,"correctCount":5,"totalQuestions":14,
+                           "completedAt":"2026-10-02T07:19:58.134199","timeLimitSeconds":null,
+                           "elapsedSeconds":null,"isWithinTimeLimit":null}},
+          {"id":"test-2","organizationId":"org-1","pathId":null,"title":"単元テスト",
+           "description":null,"passingScorePercent":70,"isRequired":true,"culture":"ja-JP",
+           "questionCount":50,"timeLimitSeconds":null,"latestResult":null}
+        ]
+        """
+
+        const val TEST_DETAIL = """
+        {"id":"test-1","organizationId":"org-1","pathId":"path-1","title":"テスト診断 1/4",
+         "description":"説明です。","passingScorePercent":70,"isRequired":true,"culture":"ja-JP",
+         "timeLimitSeconds":900,
+         "questions":[{"id":"q1","questionText":"いちばん大きい数はどれですか。","questionType":"single",
+                       "orderIndex":1,
+                       "options":[{"id":"o1","optionText":"あ","imageUrl":null,"orderIndex":1},
+                                  {"id":"o2","optionText":"い","imageUrl":null,"orderIndex":2}]}]}
+        """
+
+        const val TEST_RESULT = """
+        {"resultId":"r2","testId":"test-1","scorePercent":79,"passingScorePercent":70,"isPassed":true,
+         "correctCount":11,"totalQuestions":14,"completedAt":"2026-10-02T07:19:58.134199Z",
+         "timeLimitSeconds":300,"elapsedSeconds":420,"isWithinTimeLimit":false}
         """
 
         const val COURSE_PROGRESS = """

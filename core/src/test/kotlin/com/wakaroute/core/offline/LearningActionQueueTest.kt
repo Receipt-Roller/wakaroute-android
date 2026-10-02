@@ -3,6 +3,7 @@ package com.wakaroute.core.offline
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.QuizAnswer
+import com.wakaroute.core.content.TestAnswer
 import com.wakaroute.core.net.ApiError
 import com.wakaroute.core.net.HttpClient
 import com.wakaroute.core.net.HttpRequest
@@ -352,5 +353,49 @@ class LearningActionQueueTest {
         queue(store, api).flush()
 
         assertEquals(listOf(heldKey), api.idempotencyKeys)
+    }
+
+    // --- tests (スタート診断) -----------------------------------------------
+
+    @Test
+    fun `a held test keeps its key and its time for the later send`() = runTest {
+        // Sent three days later, it must still report the minutes the student
+        // spent — not the days it sat in the queue.
+        val store = InMemoryPendingActionStore()
+        val api = FakeApi(failWith = ApiError.Offline)
+
+        val outcome = queue(store, api).submitTestNow("test-1", listOf(TestAnswer("q1", "o1")), elapsedSeconds = 600)
+        val held = store.read().single() as PendingAction.SubmitTest
+
+        clock += 60 * 60 * 24 * 3
+        api.failWith = null
+        queue(store, api).flush()
+
+        assertEquals(TestOutcome.Held, outcome)
+        assertEquals(listOf(held.idempotencyKey), api.idempotencyKeys)
+        assertEquals(600, held.elapsedSeconds)
+        assertTrue(store.read().isEmpty())
+    }
+
+    @Test
+    fun `a test sitting and a quiz sitting are both kept`() = runTest {
+        val store = InMemoryPendingActionStore()
+        val queue = queue(store, FakeApi())
+
+        queue.submitTest("test-1", listOf(TestAnswer("q1", "o1")), elapsedSeconds = 60)
+        queue.submitTest("test-1", listOf(TestAnswer("q1", "o2")), elapsedSeconds = 90)
+
+        assertEquals(2, store.read().size)
+    }
+
+    @Test
+    fun `a queued test survives the process`() = runTest {
+        val file = File(folder.root, "queue.json")
+        queue(FilePendingActionStore(file), FakeApi())
+            .submitTest("test-1", listOf(TestAnswer("q1", "o1")), elapsedSeconds = 60)
+
+        val restored = FilePendingActionStore(file).read().single() as PendingAction.SubmitTest
+        assertEquals("test-1", restored.testId)
+        assertEquals(60, restored.elapsedSeconds)
     }
 }

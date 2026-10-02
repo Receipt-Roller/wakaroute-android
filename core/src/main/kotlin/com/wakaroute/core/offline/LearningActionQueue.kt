@@ -2,6 +2,7 @@ package com.wakaroute.core.offline
 
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.QuizAnswer
+import com.wakaroute.core.content.TestAnswer
 import com.wakaroute.core.net.ApiError
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
@@ -105,6 +106,53 @@ class LearningActionQueue(
             }
         }
     }
+
+    /** Queues a test sitting, with the key it must keep. */
+    suspend fun submitTest(
+        testId: String,
+        answers: List<TestAnswer>,
+        elapsedSeconds: Int,
+    ): PendingAction.SubmitTest {
+        val action = PendingAction.SubmitTest(
+            id = newId(),
+            createdAtEpochSeconds = now(),
+            testId = testId,
+            answers = answers,
+            elapsedSeconds = elapsedSeconds,
+            idempotencyKey = newId(),
+        )
+        enqueue(action)
+        return action
+    }
+
+    /** As [submitQuizNow]: queued first, then sent, and graded only by the server. */
+    suspend fun submitTestNow(
+        testId: String,
+        answers: List<TestAnswer>,
+        elapsedSeconds: Int,
+    ): TestOutcome {
+        val action = submitTest(testId, answers, elapsedSeconds)
+
+        return try {
+            val result = sendTest(action)
+            remove(action.id)
+            TestOutcome.Graded(result)
+        } catch (e: ApiError) {
+            if (e.isTransient) {
+                TestOutcome.Held
+            } else {
+                remove(action.id)
+                TestOutcome.Rejected
+            }
+        }
+    }
+
+    private suspend fun sendTest(action: PendingAction.SubmitTest) = content.submitTest(
+        testId = action.testId,
+        answers = action.answers,
+        elapsedSeconds = action.elapsedSeconds,
+        idempotencyKey = action.idempotencyKey,
+    )
 
     private suspend fun remove(actionId: String) = mutex.withLock {
         store.write(store.read().filterNot { it.id == actionId })
@@ -231,6 +279,11 @@ class LearningActionQueue(
             Unit
         }
 
+        is PendingAction.SubmitTest -> {
+            sendTest(action)
+            Unit
+        }
+
         is PendingAction.RecordStudy -> {
             content.recordStudySession(
                 com.wakaroute.core.content.RecordStudySession(
@@ -290,4 +343,13 @@ sealed interface QuizOutcome {
 
     /** The server refused it in a way that repeating cannot fix. */
     data object Rejected : QuizOutcome
+}
+
+/** What happened to a test sitting. The same three cases as [QuizOutcome]. */
+sealed interface TestOutcome {
+    data class Graded(val result: com.wakaroute.core.content.TestResult) : TestOutcome
+
+    data object Held : TestOutcome
+
+    data object Rejected : TestOutcome
 }

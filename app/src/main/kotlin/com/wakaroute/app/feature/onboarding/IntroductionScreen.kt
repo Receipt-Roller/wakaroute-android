@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SubdirectoryArrowLeft
 import androidx.compose.material.icons.outlined.AccountTree
+import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -81,6 +82,12 @@ fun IntroductionScreen(onFinish: () -> Unit) {
                     title = "理解マップで全体を見る",
                     body = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。" +
                         "いまは数学だけです。ほかの4教科は準備中です。",
+                )
+
+                IntroPoint(
+                    icon = Icons.Outlined.Quiz,
+                    title = "スタート診断で、戻る場所を見つける",
+                    body = "5教科それぞれ、中1から中3までを通したテストで、どこに穴があるかを確かめられます。",
                 )
 
                 IntroPoint(

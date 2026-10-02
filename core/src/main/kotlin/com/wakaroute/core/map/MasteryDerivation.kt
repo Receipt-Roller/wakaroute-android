@@ -15,9 +15,13 @@ import java.time.Instant
  * | 0 まだ | — | nothing touched |
  * | 1 意味がわかる | read it | lessons completed |
  * | 2 基本を解ける | got it right | course finished, and no quiz sat was missed |
- * | 3 根拠をつなげる | — | **needs 確認テスト, none authored** |
+ * | 3 根拠をつなげる | — | **needs a per-要素 確認テスト, none authored** |
  * | 4 初見で使える | — | needs 確認テスト |
  * | 5 時間内に安定する | — | needs test time limits (LMS-DEV t-d1bea71) |
+ *
+ * The スタート診断 that do exist test a whole 領域 at once, and are
+ * deliberately not used here: passing one says nothing about which 要素
+ * inside it are solid.
  *
  * Nothing is ever reported above 2. That is not caution for its own sake:
  * level 4 is [MasteryLevel.MasteredThreshold], so **no 要素 can ever be called

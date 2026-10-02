@@ -48,6 +48,7 @@ import com.wakaroute.core.map.domainProgress
 fun UnderstandingMapScreen(
     mapState: UnderstandingMapState,
     onOpenDomain: (SchoolSubject, String) -> Unit,
+    onOpenTests: () -> Unit,
 ) {
     val states by mapState.states.collectAsStateWithLifecycle()
 
@@ -76,6 +77,10 @@ fun UnderstandingMapScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // Above the 教科, because it is where a student starts: the テスト
+            // exist for all five, including the four whose map is 準備中.
+            TestsEntryCard(onOpenTests)
 
             for ((subject, state) in states) {
                 SubjectCard(subject, state, onOpenDomain)
@@ -132,6 +137,27 @@ private fun ProgressNote(states: List<Pair<SchoolSubject, SubjectMapState>>) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
     )
+}
+
+@Composable
+private fun TestsEntryCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {},
+    ) {
+        AdaptiveRow(modifier = Modifier.fillMaxWidth().padding(16.dp)) { flexible ->
+            Column(modifier = flexible, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "スタート診断", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "5教科それぞれ、中1から中3までのどこに穴があるかをテストで確かめます。",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        }
+    }
 }
 
 @Composable

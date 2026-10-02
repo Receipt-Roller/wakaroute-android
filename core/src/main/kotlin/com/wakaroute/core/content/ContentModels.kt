@@ -313,3 +313,99 @@ data class StudyDay(
     @Serializable(with = LenientInt::class) val totalSeconds: Int = 0,
     @Serializable(with = LenientInt::class) val sessionCount: Int = 0,
 )
+
+/**
+ * One test, as `GET /api/v1/me/tests` lists it — without its questions.
+ *
+ * Today these are the スタート診断: one per 領域 (a MANABU2 path), checking a
+ * whole stretch of 中1〜中3 at once. **They say nothing about a single 要素**,
+ * which is why a result is shown to the student and never fed into
+ * [com.wakaroute.core.map.MasteryDerivation].
+ *
+ * [latestResult] is only good for 「前回 36%」. It is missing `elapsedSeconds`
+ * and its `completedAt` has no offset, unlike the same attempt from
+ * `/me/test-attempts` (production, 2026-10-02).
+ */
+@Serializable
+data class TestSummary(
+    val id: String,
+    /** Null for a test attached to no path. Such a test is still listed to learners. */
+    val pathId: String? = null,
+    val title: String = "",
+    val description: String? = null,
+    @Serializable(with = LenientInt::class) val passingScorePercent: Int = 0,
+    @Serializable(with = LenientInt::class) val questionCount: Int = 0,
+    /** Null when the test has no limit. */
+    @Serializable(with = LenientInt::class) val timeLimitSeconds: Int? = null,
+    val latestResult: TestResult? = null,
+)
+
+/** `GET /api/v1/tests/{id}` — the questions, without an answer key. */
+@Serializable
+data class TestDetail(
+    val id: String,
+    val pathId: String? = null,
+    val title: String = "",
+    val description: String? = null,
+    @Serializable(with = LenientInt::class) val passingScorePercent: Int = 0,
+    @Serializable(with = LenientInt::class) val timeLimitSeconds: Int? = null,
+    val questions: List<TestQuestion> = emptyList(),
+)
+
+/**
+ * Text is written with `$…$` maths, not the `\(…\)` lesson bodies use — read it
+ * through [com.wakaroute.core.documents.MathNotation.toReadableText] with
+ * `dollarDelimited = true`.
+ */
+@Serializable
+data class TestQuestion(
+    val id: String,
+    val questionText: String = "",
+    val questionType: String = "",
+    @Serializable(with = LenientInt::class) val orderIndex: Int = 0,
+    val options: List<TestOption> = emptyList(),
+)
+
+/** `optionText`, where a lesson quiz says `text`. */
+@Serializable
+data class TestOption(
+    val id: String,
+    val optionText: String = "",
+    @Serializable(with = LenientInt::class) val orderIndex: Int = 0,
+)
+
+/** Both fields are required by the server; a missing one is a 400. */
+@Serializable
+data class TestAnswer(val questionId: String, val optionId: String)
+
+/** The body of `POST /api/v1/tests/{id}/submit`. */
+@Serializable
+internal data class TestSubmission(
+    val answers: List<TestAnswer>,
+    /**
+     * Measured on the device. There is no start endpoint, so this is the only
+     * way the server learns how long the sitting took — and therefore whether
+     * it was within the limit.
+     */
+    val elapsedSeconds: Int,
+)
+
+/** The graded result. **Produced by the server, never by the app.** */
+@Serializable
+data class TestResult(
+    val resultId: String = "",
+    val testId: String = "",
+    @Serializable(with = LenientInt::class) val scorePercent: Int = 0,
+    @Serializable(with = LenientInt::class) val passingScorePercent: Int = 0,
+    val isPassed: Boolean = false,
+    @Serializable(with = LenientInt::class) val correctCount: Int? = null,
+    @Serializable(with = LenientInt::class) val totalQuestions: Int? = null,
+    val completedAt: String? = null,
+    @Serializable(with = LenientInt::class) val timeLimitSeconds: Int? = null,
+    @Serializable(with = LenientInt::class) val elapsedSeconds: Int? = null,
+    /** Null means it cannot be judged — no limit, or no time reported. Not "within". */
+    val isWithinTimeLimit: Boolean? = null,
+) {
+    /** Passed, but slower than the limit. A different state from passing. */
+    val passedButOverTime: Boolean get() = isPassed && isWithinTimeLimit == false
+}

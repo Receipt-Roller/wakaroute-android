@@ -30,7 +30,8 @@ enum class MasteryLevel(val level: Int, val label: String) {
         /**
          * The highest level any available evidence can support.
          *
-         * Levels 3 and above need a 確認テスト, and none has been authored;
+         * Levels 3 and above need a per-要素 確認テスト, and none has been
+         * authored (the スタート診断 cover a whole 領域, not one 要素);
          * level 5 additionally needs test time limits (LMS-DEV t-d1bea71).
          *
          * Two consequences that are easy to get wrong, and both matter:

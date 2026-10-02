@@ -42,6 +42,8 @@ import com.wakaroute.app.feature.onboarding.IntroductionScreen
 import com.wakaroute.app.feature.schools.SchoolDetailScreen
 import com.wakaroute.app.feature.schools.SchoolSearchScreen
 import com.wakaroute.app.feature.study.StudyRecordScreen
+import com.wakaroute.app.feature.tests.TestListScreen
+import com.wakaroute.app.feature.tests.TestScreen
 import com.wakaroute.core.documents.BundledDocument
 import com.wakaroute.core.map.SchoolSubject
 import kotlinx.coroutines.launch
@@ -74,6 +76,8 @@ object Routes {
     const val GOALS = "goals"
     const val LESSON = "lessons/{lessonId}"
     const val QUIZ = "lessons/{lessonId}/quiz"
+    const val TESTS = "tests"
+    const val TEST = "tests/{testId}"
 
     const val DOMAIN = "map/{subject}/{domain}"
     const val ELEMENT = "map/{subject}/{domain}/{element}"
@@ -90,6 +94,8 @@ object Routes {
     fun lesson(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}"
 
     fun quiz(lessonId: String) = "lessons/${java.net.URLEncoder.encode(lessonId, "UTF-8")}/quiz"
+
+    fun test(testId: String) = "tests/${java.net.URLEncoder.encode(testId, "UTF-8")}"
 
     fun document(document: BundledDocument) = "documents/${document.name}"
 
@@ -176,6 +182,24 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         UnderstandingMapScreen(
             mapState = services.understandingMap,
             onOpenDomain = { subject, domain -> navController.navigate(Routes.domain(subject, domain)) },
+            onOpenTests = { navController.navigate(Routes.TESTS) },
+        )
+    }
+
+    composable(Routes.TESTS) {
+        TestListScreen(
+            content = services.content,
+            onOpenTest = { navController.navigate(Routes.test(it)) },
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.TEST) { entry ->
+        TestScreen(
+            content = services.content,
+            queue = services.actionQueue,
+            testId = entry.arguments?.getString("testId").orEmpty(),
+            onBack = navController::popBackStack,
         )
     }
 

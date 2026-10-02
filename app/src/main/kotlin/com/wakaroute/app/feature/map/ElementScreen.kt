@@ -169,7 +169,7 @@ private fun MasteryScale(current: MasteryLevel) {
         }
 
         Text(
-            text = "レベル3以上は確認テストが必要です。テストはまだ作られていないため、準備中としています。",
+            text = "レベル3以上は、この項目ひとつを確かめる確認テストが必要です。まだ作られていないため、準備中としています。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

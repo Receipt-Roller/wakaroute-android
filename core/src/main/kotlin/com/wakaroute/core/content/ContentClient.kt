@@ -107,6 +107,45 @@ class ContentClient(
         )
     }
 
+    /** Every test this learner can sit, with their latest result on each. */
+    suspend fun tests(): List<TestSummary> = get("/api/v1/me/tests") { request ->
+        http.sendDecoding(request, ListSerializer(TestSummary.serializer()))
+    }
+
+    suspend fun testDetail(testId: String): TestDetail = get("/api/v1/tests/$testId") { request ->
+        http.sendDecoding(request, TestDetail.serializer())
+    }
+
+    /**
+     * Submits a test and returns the **server's** grade.
+     *
+     * The same Idempotency-Key rule as [submitQuiz], verified on production:
+     * a resend with the same key returns the first `resultId`.
+     *
+     * An empty [answers] is refused here. The server accepts one and records
+     * it as a 0% failed attempt (production, 2026-10-02) — a failure the
+     * student never sat, in a history they cannot edit.
+     */
+    suspend fun submitTest(
+        testId: String,
+        answers: List<TestAnswer>,
+        elapsedSeconds: Int,
+        idempotencyKey: String,
+    ): TestResult {
+        require(idempotencyKey.isNotBlank()) { "a test submission needs an Idempotency-Key" }
+        require(answers.isNotEmpty()) { "an empty test submission is recorded as a 0% attempt" }
+
+        val submission = TestSubmission(answers, elapsedSeconds)
+        return http.sendDecoding(
+            postRequest(
+                path = "/api/v1/tests/$testId/submit",
+                body = WakaRouteJson.encodeToString(TestSubmission.serializer(), submission),
+                headers = mapOf("Idempotency-Key" to idempotencyKey),
+            ),
+            TestResult.serializer(),
+        )
+    }
+
     /**
      * Records a session that has already finished.
      *

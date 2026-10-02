@@ -1,6 +1,7 @@
 package com.wakaroute.core.offline
 
 import com.wakaroute.core.content.QuizAnswer
+import com.wakaroute.core.content.TestAnswer
 import kotlinx.serialization.Serializable
 
 /**
@@ -60,6 +61,26 @@ sealed interface PendingAction {
         override val createdAtEpochSeconds: Long,
         val answers: List<QuizAnswer>,
         val idempotencyKey: String,
+    ) : PendingAction {
+        override val mergeRule get() = MergeRule.Keep
+    }
+
+    /**
+     * A test sitting. Same key rule as [SubmitQuiz].
+     *
+     * [lessonId] is empty: a test belongs to a 領域, not a lesson.
+     * [elapsedSeconds] is fixed when the student submitted — a resend days
+     * later must not report the days as time spent on the test.
+     */
+    @Serializable
+    data class SubmitTest(
+        override val id: String,
+        override val createdAtEpochSeconds: Long,
+        val testId: String,
+        val answers: List<TestAnswer>,
+        val elapsedSeconds: Int,
+        val idempotencyKey: String,
+        override val lessonId: String = "",
     ) : PendingAction {
         override val mergeRule get() = MergeRule.Keep
     }
