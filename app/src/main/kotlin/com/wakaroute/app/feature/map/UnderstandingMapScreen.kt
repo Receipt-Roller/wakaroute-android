@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
-import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.app.ui.design.StandingChip
 import com.wakaroute.core.map.DomainProgress
@@ -39,10 +38,10 @@ import com.wakaroute.core.map.domainProgress
 /**
  * The 理解マップ, one card per 教科.
  *
- * All five appear. Four of them have no authored prerequisite edges, and they
- * say 準備中 rather than being hidden or — far worse — handed an empty graph. On
- * an empty graph every 要素 is `Ready`, and this screen would cheerfully report
- * 「つまずきはありません」 about four subjects nobody has mapped.
+ * Only 教科 with a map appear. One without authored prerequisite edges is
+ * left out rather than labelled 準備中 — and never handed an empty graph: on
+ * one, every 要素 is `Ready`, and this screen would cheerfully report
+ * 「つまずきはありません」 about a subject nobody has mapped.
  */
 @Composable
 fun UnderstandingMapScreen(
@@ -56,8 +55,8 @@ fun UnderstandingMapScreen(
     // has an account — the first authenticated call is what creates a MANABU2
     // learner, and opening a map must not do that.
     LaunchedEffect(Unit) {
-        // Graphs first: a 教科 whose edges have just been published stops being
-        // 準備中 before the record is layered on. Needs no account.
+        // Graphs first: a 教科 whose edges have just been published appears
+        // before the record is layered on. Needs no account.
         mapState.refreshPublishedGraphs()
         mapState.refreshProgress()
     }
@@ -79,11 +78,11 @@ fun UnderstandingMapScreen(
             )
 
             // Above the 教科, because it is where a student starts: the テスト
-            // exist for all five, including the four whose map is 準備中.
+            // exist for all five, including the ones without a map.
             TestsEntryCard(onOpenTests)
 
             for ((subject, state) in states) {
-                SubjectCard(subject, state, onOpenDomain)
+                if (state is SubjectMapState.Available) SubjectCard(subject, state, onOpenDomain)
             }
 
             // Said once, at the bottom, rather than beside every 要素 — and it
@@ -163,7 +162,7 @@ private fun TestsEntryCard(onClick: () -> Unit) {
 @Composable
 private fun SubjectCard(
     subject: SchoolSubject,
-    state: SubjectMapState,
+    state: SubjectMapState.Available,
     onOpenDomain: (SchoolSubject, String) -> Unit,
 ) {
     Card(
@@ -174,47 +173,19 @@ private fun SubjectCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            AdaptiveRow(modifier = Modifier.fillMaxWidth()) { flexible ->
-                Text(
-                    text = subject.label,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = flexible,
-                )
-                if (state !is SubjectMapState.Available) ComingSoonChip()
+            Text(text = subject.label, style = MaterialTheme.typography.titleLarge)
+
+            val progress = state.subject.domainProgress(state.progress.recordOrEmpty)
+            for (domain in progress) {
+                HorizontalDivider()
+                DomainRow(domain) { onOpenDomain(subject, domain.domain.code) }
             }
 
-            when (state) {
-                is SubjectMapState.Available -> {
-                    val progress = state.subject.domainProgress(state.progress.recordOrEmpty)
-
-                    for (domain in progress) {
-                        HorizontalDivider()
-                        DomainRow(domain) { onOpenDomain(subject, domain.domain.code) }
-                    }
-
-                    Text(
-                        text = "つながりの作成日: ${state.asOf}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                SubjectMapState.ComingSoon -> Text(
-                    text = "${subject.label}のつながりは、まだ作られていません。" +
-                        "できあがるまで表示しません。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                // Deliberately not a partial map. A broken graph sends students
-                // back to the wrong place, and no map is better than a wrong one.
-                is SubjectMapState.Unavailable -> Text(
-                    text = "${subject.label}のつながりを読み込めませんでした。" +
-                        "正しく直るまで表示しません。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                text = "つながりの作成日: ${state.asOf}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

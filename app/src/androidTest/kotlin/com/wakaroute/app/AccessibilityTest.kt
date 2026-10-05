@@ -1,9 +1,7 @@
 package com.wakaroute.app
 
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,7 +48,7 @@ class AccessibilityTest {
 
         rule.setContent {
             WakaRouteTheme {
-                UnderstandingMapScreen(mapState = state, onOpenDomain = { _, _ -> })
+                UnderstandingMapScreen(mapState = state, onOpenDomain = { _, _ -> }, onOpenTests = {})
             }
         }
     }
@@ -104,28 +102,17 @@ class AccessibilityTest {
     }
 
     @Test
-    fun comingSoonSaysWhoseProblemItIs() {
-        setMapScreen()
-
-        // 「準備中」 on its own is ambiguous read aloud, with no surrounding
-        // layout to anchor it. The spoken form says it is the app that is not
-        // ready — not the student.
-        //
-        // Four of them: 国語, 英語, 理科, 社会. The count is asserted rather than
-        // ignored, because 数学 gaining a 準備中 chip — or one of the other four
-        // losing it — is exactly the regression worth catching here.
-        rule.onAllNodesWithContentDescription("準備中。この機能はまだ使えません")
-            .assertCountEquals(4)
-    }
-
-    @Test
     fun subjectsWithoutEdgesAreNotDrawnAsUsable() {
         setMapScreen()
 
         // The rule this whole screen exists to protect: a 教科 with no authored
         // prerequisite edges must not present any 領域 to open. If an empty
-        // graph ever gets substituted, rows appear here and the screen starts
-        // telling students there is nothing in their way.
-        rule.onNodeWithText("国語のつながりは、まだ作られていません。できあがるまで表示しません。").assertExists()
+        // graph ever gets substituted, it appears here and the screen starts
+        // telling students there is nothing in their way. Such a 教科 is not
+        // shown at all.
+        rule.onNodeWithText("数学").assertExists()
+        for (subject in listOf("国語", "英語", "理科", "社会")) {
+            rule.onNodeWithText(subject).assertDoesNotExist()
+        }
     }
 }

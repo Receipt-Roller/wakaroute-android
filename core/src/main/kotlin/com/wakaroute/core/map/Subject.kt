@@ -64,9 +64,9 @@ data class Subject(
 /**
  * The five 教科, which are fixed.
  *
- * Known rather than discovered, so a subject with no content yet still appears
- * — as 準備中 rather than silently missing, which is what the サービス仕様
- * requires of anything unbuilt.
+ * Known rather than discovered. A subject with no map yet is not shown at all
+ * — not even as 準備中 (product decision, 2026-10-05; the サービス仕様 still
+ * says 準備中 and needs updating to match).
  */
 enum class SchoolSubject(val label: String) {
     Japanese("国語"),

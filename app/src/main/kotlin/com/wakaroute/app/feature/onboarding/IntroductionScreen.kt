@@ -39,10 +39,9 @@ import com.wakaroute.app.ui.theme.WakaRouteTheme
  *
  * 1. **It is not a sign-up.** No account, no email, no password — that is the
  *    product decision, and the intro is where a student first sees it kept.
- * 2. **It describes only what this build does.** The 準備中 paragraph is the
- *    first thing to go stale when a phase lands — it named 学習の記録, クイズ and
- *    志望校 long after all three shipped. Check it against the app before
- *    release, not against this comment.
+ * 2. **It describes only what this build does.** What is not built is not
+ *    mentioned at all — a list of it was the first thing to go stale when a
+ *    phase landed, naming 学習の記録, クイズ and 志望校 long after they shipped.
  * 3. **It does not predict results.** 「合格できます」 in any form is ruled out by
  *    the 利用規約 and the 保護者向けガイド alike.
  */
@@ -80,8 +79,7 @@ fun IntroductionScreen(onFinish: () -> Unit) {
                 IntroPoint(
                     icon = Icons.Outlined.AccountTree,
                     title = "理解マップで全体を見る",
-                    body = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。" +
-                        "いまは数学だけです。ほかの4教科は準備中です。",
+                    body = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。",
                 )
 
                 IntroPoint(
@@ -102,18 +100,6 @@ fun IntroductionScreen(onFinish: () -> Unit) {
                     title = "高校を探す",
                     body = "全国の高校を、キーワード・都道府県・設置区分でさがせます。" +
                         "文部科学省の学校コードをもとにしたデータです。",
-                )
-
-                Text(
-                    text = "いまできないこと",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                Text(
-                    text = "数学以外の教科の理解マップ、学習リマインダー、保護者との連携は、まだ動いていません。" +
-                        "できあがるまで、アプリの中では「準備中」と表示されます。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 Text(

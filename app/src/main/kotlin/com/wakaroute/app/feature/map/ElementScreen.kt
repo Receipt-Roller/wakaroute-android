@@ -22,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
-import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.core.map.ElementId
 import com.wakaroute.core.map.LearningElement
@@ -37,10 +36,10 @@ import java.net.URLDecoder
 /**
  * One 要素: what it needs, and what needs it.
  *
- * The levels are shown as a scale, and the ones above 基本を解ける are marked
- * **準備中** rather than 未達成. That distinction is the whole reason this screen
- * is careful: nobody has written the 確認テスト those levels would need, so a
- * student has not failed them — there is nothing there to fail.
+ * The levels are shown as a scale, but only up to 基本を解ける. Nobody has
+ * written the per-要素 確認テスト the higher ones would need, so they are left
+ * out rather than drawn as 未達成 — a student has not failed something that
+ * does not exist.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,7 +131,7 @@ private fun MasteryScale(current: MasteryLevel) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "理解のレベル", style = MaterialTheme.typography.titleMedium)
 
-        for (level in MasteryLevel.entries) {
+        for (level in MasteryLevel.entries.filter { it.isMeasurable }) {
             val isCurrent = level == current
 
             Surface(
@@ -158,9 +157,6 @@ private fun MasteryScale(current: MasteryLevel) {
                         modifier = flexible,
                     )
 
-                    // 準備中, never 未達成. There is no 確認テスト behind these
-                    // levels, so nothing has been failed.
-                    if (!level.isMeasurable) ComingSoonChip()
                     if (isCurrent) {
                         Text(text = "いまここ", style = MaterialTheme.typography.labelLarge)
                     }
@@ -168,11 +164,6 @@ private fun MasteryScale(current: MasteryLevel) {
             }
         }
 
-        Text(
-            text = "レベル3以上は、この項目ひとつを確かめる確認テストが必要です。まだ作られていないため、準備中としています。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

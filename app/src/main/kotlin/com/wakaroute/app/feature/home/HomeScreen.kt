@@ -10,8 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.AccountTree
@@ -36,7 +34,6 @@ import com.wakaroute.app.AppServices
 import com.wakaroute.app.data.TargetSchoolsUi
 import com.wakaroute.core.goals.TargetSchoolList
 import com.wakaroute.app.ui.design.AdaptiveRow
-import com.wakaroute.app.ui.design.ComingSoonChip
 import com.wakaroute.app.ui.design.ReadableColumn
 import com.wakaroute.core.documents.BundledDocument
 import com.wakaroute.core.map.SchoolSubject
@@ -53,9 +50,8 @@ import com.wakaroute.core.map.SubjectMapState
  * about the same three 要素 on every launch — guidance with nothing behind it,
  * which §7 rules out as squarely as an invented number would be.
  *
- * The other distinction it has to keep is between **まだ記録がありません** (about
- * the student) and **準備中** (about the app). Both leave the screen looking
- * empty; only one of them is something the student did.
+ * What the app cannot do yet is not listed at all. A student who reads 準備中
+ * stops looking for it, and the list goes stale the moment a feature ships.
  */
 @Composable
 fun HomeScreen(
@@ -111,17 +107,14 @@ fun HomeScreen(
             ActionCard(
                 icon = Icons.Outlined.AccountTree,
                 title = "理解マップ",
+                // Only what is there: the スタート診断 always, a 教科's map once
+                // it has one.
                 body = when (mathState) {
-                    null -> "準備中です。"
                     is SubjectMapState.Available ->
                         "数学の${mathState.subject.elements.size}項目と、その前提関係を見られます。" +
-                            "ほかの4教科は準備中です。"
+                            "5教科のスタート診断も受けられます。"
 
-                    // The graph is bundled, so this is a bug in the build rather
-                    // than a network problem. Said plainly instead of blaming
-                    // the connection.
-                    is SubjectMapState.Unavailable -> "いま表示できません。アプリの更新をお待ちください。"
-                    SubjectMapState.ComingSoon -> "準備中です。"
+                    else -> "5教科のスタート診断で、どこに穴があるかを確かめられます。"
                 },
                 onClick = onOpenMap,
             )
@@ -139,8 +132,6 @@ fun HomeScreen(
                 body = "何がどんな順番で決まっていくのか、全体の形を説明しています。",
                 onClick = { onOpenDocument(BundledDocument.ExamGuide) },
             )
-
-            PreparingSection()
         }
     }
 }
@@ -202,8 +193,7 @@ private fun TargetSchoolsInvitation(onOpenSchools: () -> Unit) {
         icon = Icons.Filled.Flag,
         title = "志望校を登録する",
         // No promise about what registering will unlock beyond what it does
-        // today: the count of days. 学習の記録 is still 準備中 and saying it here
-        // would be selling something that does not exist yet.
+        // today: the count of days.
         body = "気になる高校を志望校に登録すると、入試までの日数がここに出ます。",
         onClick = onOpenSchools,
     )
@@ -262,62 +252,6 @@ private fun TargetSchoolsCard(list: TargetSchoolList, onOpenGoals: () -> Unit) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
-    }
-}
-
-/**
- * What is still not built.
- *
- * Kept accurate rather than kept short. Every item removed from this list is a
- * feature that now works — and an item left on it after it ships is worse than
- * no list at all, because a student who reads 準備中 stops looking for it.
- *
- * レッスンとクイズ, 学習時間の記録 and 志望校の登録 have all left this list.
- */
-@Composable
-private fun PreparingSection() {
-    Text(
-        text = "準備中",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 8.dp),
-    )
-
-    Text(
-        text = "つぎの機能はまだ動いていません。できあがったらこの画面に出てきます。",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            PreparingRow(Icons.Filled.Notifications, "学習リマインダー")
-            PreparingRow(Icons.Filled.People, "保護者との連携")
-        }
-    }
-}
-
-@Composable
-private fun PreparingRow(icon: ImageVector, label: String) {
-    AdaptiveRow(modifier = Modifier.fillMaxWidth()) { flexible ->
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = flexible,
-        )
-        ComingSoonChip()
     }
 }
 

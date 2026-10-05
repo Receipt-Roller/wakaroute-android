@@ -97,25 +97,6 @@ fun StandingChip(standing: DomainProgress.Standing, modifier: Modifier = Modifie
     StatusChip(label = standing.label, icon = icon, tone = tone, modifier = modifier)
 }
 
-/**
- * 準備中 — something the app cannot do yet.
- *
- * Distinct from 「まだ」 on purpose. 「まだ」 is about the student; 準備中 is about
- * the app, and a student must never be shown their own blank record as though
- * it were a shortfall of theirs.
- */
-@Composable
-fun ComingSoonChip(modifier: Modifier = Modifier) {
-    StatusChip(
-        label = "準備中",
-        icon = Icons.Filled.HourglassEmpty,
-        tone = StatusTone.Pending,
-        modifier = modifier.clearAndSetSemantics {
-            contentDescription = "準備中。この機能はまだ使えません"
-        },
-    )
-}
-
 private data class ChipColors(val container: Color, val content: Color)
 
 @Composable

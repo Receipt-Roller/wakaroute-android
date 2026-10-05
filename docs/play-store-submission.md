@@ -145,7 +145,7 @@ Play は **長辺を短辺の2倍以内**に制限しているので、撮った
 - [ ] **チームの Android Studio を Meerkat (2024.3.1) 以上に更新**（上記1）
 - [ ] `keystore.properties` を作成し、鍵をバックアップ
 - [ ] `versionCode` が前回のアップロードより大きい（初回は 1）
-- [ ] `./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:bundleRelease` が green
+- [ ] `./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:compileDebugAndroidTestKotlin :app:bundleRelease` が green
 - [ ] 計装テストが実機で green
 - [ ] プライバシーポリシーの公開 URL
 - [ ] データ セーフティ フォーム（上記2）
@@ -160,7 +160,7 @@ Play は **長辺を短辺の2倍以内**に制限しているので、撮った
 **アプリ側は対応済み。サーバー側が未実装です。**
 
 国語・英語・理科・社会は MANABU2 にコンテンツがありますが、前提関係の辺が書かれていないので
-「準備中」のままです。辺を配信すれば、**すでに入っているアプリにそのまま出ます。**
+アプリには表示されません。辺を配信すれば、**すでに入っているアプリにそのまま出ます。**
 
 ### 必要なエンドポイント
 
@@ -193,7 +193,7 @@ GET https://wakaroute.com/api/prerequisites
   そのまま1件分になります。まず数学をこの形で配信すれば、往復で確認できます。
 - **認証は要りません。** 学習者のデータではないので、`/api/schools` と同じ扱いです。
   認証必須にすると、アカウントを作っていない生徒に教科が出なくなります。
-- **`graphs` に無い教科は「準備中」です。** 載せれば出て、外せば消えます。
+- **`graphs` に無い教科は表示されません。** 載せれば出て、外せば消えます。
 - `subject` は表示名そのまま（`国語` `数学` `英語` `理科` `社会`）で突き合わせます。
 
 ### アプリが受け取ったあとにやること

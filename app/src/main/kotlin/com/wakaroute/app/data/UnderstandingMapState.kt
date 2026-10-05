@@ -24,7 +24,7 @@ class UnderstandingMapState(
 ) {
     private val _states = MutableStateFlow(bundled.allStates())
 
-    /** Every 教科 in display order, so 準備中 ones still appear. */
+    /** Every 教科 in display order. Screens show only the ones with a map. */
     val states: StateFlow<List<Pair<SchoolSubject, SubjectMapState>>> = _states.asStateFlow()
 
     fun state(subject: SchoolSubject): SubjectMapState =
@@ -46,7 +46,7 @@ class UnderstandingMapState(
         val sync = graphs ?: return
         sync.refresh()
 
-        // Re-read: a 教科 whose edges have just arrived stops being 準備中.
+        // Re-read: a 教科 whose edges have just arrived now has a map to show.
         _states.value = bundled.allStates()
     }
 
@@ -54,7 +54,7 @@ class UnderstandingMapState(
      * Replaces the bundled structure with the live one where it can.
      *
      * Per subject rather than all-or-nothing: 数学 succeeding should not wait on
-     * anything, and the four 準備中 教科 cost no request at all.
+     * anything, and a 教科 without a map costs no request at all.
      */
     suspend fun refreshProgress() {
         _states.value = _states.value.map { (subject, current) ->
