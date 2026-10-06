@@ -42,6 +42,18 @@ class ContentClient(
         http.sendDecoding(request, ListSerializer(QuizAttempt.serializer()))
     }
 
+    /**
+     * Every path in ワカルート's organization, in one unpaged response.
+     *
+     * The organization listing rather than `/api/v1/paths`, as on iOS: it needs
+     * only `read:catalog`, which a device-registered learner has, and it is
+     * gated on membership rather than an admin role.
+     */
+    suspend fun paths(): List<PathSummary> =
+        get("/api/v1/organizations/${environment.organizationId}/paths") { request ->
+            http.sendDecoding(request, ListSerializer(PathSummary.serializer()))
+        }
+
     suspend fun pathDetail(pathId: String): PathDetail = get("/api/v1/paths/$pathId") { request ->
         http.sendDecoding(request, PathDetail.serializer())
     }

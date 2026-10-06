@@ -37,10 +37,8 @@ private sealed interface LessonListState {
 /**
  * The lessons of one 要素.
  *
- * Lives on the 項目 screen rather than behind a separate 学ぶ tab. §5 describes
- * 学ぶ as 教科 → 領域 → 項目 → レッスン, which is the route the 理解マップ already
- * takes for its first three steps — building a second one would give the same
- * place two doors and let them drift apart.
+ * Shared by the two ways to a 項目 — 学ぶ (教科 → 領域 → 項目) and the 理解マップ —
+ * so the same place behind two doors cannot drift apart.
  *
  * The content endpoints are authenticated, so this needs a token — the account
  * is created at launch, and [AuthSession] registers again if that first attempt

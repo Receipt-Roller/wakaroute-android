@@ -47,7 +47,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.wakaroute.app.ui.design.Centered
 import com.wakaroute.app.ui.design.ReadableColumn
+import com.wakaroute.app.ui.design.studentFacingMessage
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.TestAnswer
 import com.wakaroute.core.content.TestDetail

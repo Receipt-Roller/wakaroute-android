@@ -48,7 +48,7 @@ class AccessibilityTest {
 
         rule.setContent {
             WakaRouteTheme {
-                UnderstandingMapScreen(mapState = state, onOpenDomain = { _, _ -> }, onOpenTests = {})
+                UnderstandingMapScreen(mapState = state, onOpenDomain = { _, _ -> }, onBack = {})
             }
         }
     }

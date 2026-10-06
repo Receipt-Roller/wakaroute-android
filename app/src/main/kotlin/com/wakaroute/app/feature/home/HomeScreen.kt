@@ -56,7 +56,7 @@ import com.wakaroute.core.map.SubjectMapState
 @Composable
 fun HomeScreen(
     services: AppServices,
-    onOpenMap: () -> Unit,
+    onOpenLearn: () -> Unit,
     onOpenSchools: () -> Unit,
     onOpenGoals: () -> Unit,
     onOpenElement: (SchoolSubject, String, String) -> Unit,
@@ -106,17 +106,12 @@ fun HomeScreen(
 
             ActionCard(
                 icon = Icons.Outlined.AccountTree,
-                title = "理解マップ",
-                // Only what is there: the スタート診断 always, a 教科's map once
-                // it has one.
-                body = when (mathState) {
-                    is SubjectMapState.Available ->
-                        "数学の${mathState.subject.elements.size}項目と、その前提関係を見られます。" +
-                            "5教科のスタート診断も受けられます。"
-
-                    else -> "5教科のスタート診断で、どこに穴があるかを確かめられます。"
-                },
-                onClick = onOpenMap,
+                title = "学ぶ",
+                // Only what is there: a 教科's 理解マップ is mentioned once it
+                // has one.
+                body = "5教科のレッスンと確認クイズ、スタート診断。" +
+                    if (mathState is SubjectMapState.Available) "数学は理解マップで、前提のつながりも見られます。" else "",
+                onClick = onOpenLearn,
             )
 
             ActionCard(

@@ -14,6 +14,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,11 +48,12 @@ import com.wakaroute.core.map.domainProgress
  * one, every 要素 is `Ready`, and this screen would cheerfully report
  * 「つまずきはありません」 about a subject nobody has mapped.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnderstandingMapScreen(
     mapState: UnderstandingMapState,
     onOpenDomain: (SchoolSubject, String) -> Unit,
-    onOpenTests: () -> Unit,
+    onBack: () -> Unit,
 ) {
     val states by mapState.states.collectAsStateWithLifecycle()
 
@@ -61,35 +67,43 @@ fun UnderstandingMapScreen(
         mapState.refreshProgress()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        ReadableColumn(spacing = 16.dp) {
-            Text(text = "理解マップ", style = MaterialTheme.typography.headlineSmall)
-
-            Text(
-                text = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("理解マップ") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    }
+                },
             )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            ReadableColumn(spacing = 16.dp) {
+                Text(
+                    text = "教科の中がどんな項目に分かれていて、何が何の前提になっているのかを見られます。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-            // Above the 教科, because it is where a student starts: the テスト
-            // exist for all five, including the ones without a map.
-            TestsEntryCard(onOpenTests)
+                for ((subject, state) in states) {
+                    if (state is SubjectMapState.Available) SubjectCard(subject, state, onOpenDomain)
+                }
 
-            for ((subject, state) in states) {
-                if (state is SubjectMapState.Available) SubjectCard(subject, state, onOpenDomain)
+                // Said once, at the bottom, rather than beside every 要素 — and it
+                // has to say **which** of the three situations this is. All three
+                // leave everything at まだ, and only one of them is about the
+                // student.
+                ProgressNote(states)
             }
-
-            // Said once, at the bottom, rather than beside every 要素 — and it
-            // has to say **which** of the three situations this is. All three
-            // leave everything at まだ, and only one of them is about the
-            // student.
-            ProgressNote(states)
         }
     }
 }
@@ -136,27 +150,6 @@ private fun ProgressNote(states: List<Pair<SchoolSubject, SubjectMapState>>) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
     )
-}
-
-@Composable
-private fun TestsEntryCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .semantics(mergeDescendants = true) {},
-    ) {
-        AdaptiveRow(modifier = Modifier.fillMaxWidth().padding(16.dp)) { flexible ->
-            Column(modifier = flexible, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "スタート診断", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "5教科それぞれ、中1から中3までのどこに穴があるかをテストで確かめます。",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-        }
-    }
 }
 
 @Composable

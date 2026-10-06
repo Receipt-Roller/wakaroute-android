@@ -2,7 +2,6 @@ package com.wakaroute.app.feature.tests
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wakaroute.app.ui.design.AdaptiveRow
+import com.wakaroute.app.ui.design.Centered
 import com.wakaroute.app.ui.design.ReadableColumn
+import com.wakaroute.app.ui.design.studentFacingMessage
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.TestSummary
 import com.wakaroute.core.net.ApiError
@@ -162,17 +163,3 @@ private fun TestRow(test: TestSummary, onClick: () -> Unit) {
 
 internal fun timeLimitLabel(timeLimitSeconds: Int?): String =
     if (timeLimitSeconds == null) "時間制限なし" else "${timeLimitSeconds / 60}分"
-
-@Composable
-internal fun Centered(padding: PaddingValues, content: @Composable () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().padding(padding).padding(32.dp),
-        contentAlignment = Alignment.Center,
-    ) { content() }
-}
-
-internal fun ApiError.studentFacingMessage(): String = when (this) {
-    is ApiError.Offline -> "インターネットにつながっていないようです。"
-    is ApiError.TimedOut -> "時間内に返事がありませんでした。"
-    else -> "いま読み込めませんでした。しばらくしてから、もう一度ためしてください。"
-}

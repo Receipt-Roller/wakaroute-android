@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.outlined.AccountTree
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,7 +30,11 @@ import com.wakaroute.app.AppServices
 import com.wakaroute.app.feature.documents.DocumentScreen
 import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
+import com.wakaroute.app.feature.learn.CourseScreen
+import com.wakaroute.app.feature.learn.LearnScreen
 import com.wakaroute.app.feature.learn.LessonScreen
+import com.wakaroute.app.feature.learn.PathScreen
+import com.wakaroute.app.feature.learn.SubjectScreen
 import com.wakaroute.app.feature.learn.QuizScreen
 import com.wakaroute.app.feature.map.DomainScreen
 import com.wakaroute.app.feature.map.ElementScreen
@@ -49,17 +53,25 @@ import com.wakaroute.core.map.SchoolSubject
 import kotlinx.coroutines.launch
 
 /**
- * Four tabs, not the five of §5.
+ * The five tabs of §5, with the same names and meanings as iOS — which is what
+ * the 共通判断規則 requires: 「見た目は違っていい、言葉は揃える」.
  *
- * 学ぶ and 記録 belong to Phase 2 and have nothing behind them yet. A tab that
- * opens onto 準備中 every time still teaches a student to stop tapping it, and
- * §4 is explicit that Phase 1 must not present unbuilt features as though they
- * were there. The names and meanings of the four that do exist match iOS, which
- * is what the 共通判断規則 actually requires — 「見た目は違っていい」.
+ * [owns] lists the route prefixes pushed from a tab, so the tab stays selected
+ * while a student is inside it.
  */
-private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
+private enum class Tab(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+    val owns: List<String> = emptyList(),
+) {
     Home(Routes.HOME, "ホーム", Icons.Filled.Home),
-    Map(Routes.MAP, "理解マップ", Icons.Outlined.AccountTree),
+    Learn(
+        Routes.LEARN,
+        "学ぶ",
+        Icons.AutoMirrored.Filled.MenuBook,
+        owns = listOf("subjects", "paths", "courses", "lessons", "tests", "map"),
+    ),
     Record(Routes.RECORD, "記録", Icons.Filled.Timer),
     Schools(Routes.SCHOOLS, "高校を探す", Icons.Filled.School),
     More(Routes.MORE, "その他", Icons.Filled.MoreHoriz),
@@ -68,6 +80,10 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 object Routes {
     const val INTRODUCTION = "introduction"
     const val HOME = "home"
+    const val LEARN = "learn"
+    const val SUBJECT = "subjects/{subject}"
+    const val PATH = "paths/{pathId}?title={title}"
+    const val COURSE = "courses/{courseId}?title={title}"
     const val MAP = "map"
     const val RECORD = "record"
     const val SCHOOLS = "schools"
@@ -83,6 +99,14 @@ object Routes {
     const val ELEMENT = "map/{subject}/{domain}/{element}"
     const val SCHOOL_DETAIL = "schools/{schoolId}"
     const val DOCUMENT = "documents/{document}"
+
+    fun subject(subject: SchoolSubject) = "subjects/${subject.name}"
+
+    fun path(pathId: String, title: String) = "paths/${encode(pathId)}?title=${encode(title)}"
+
+    fun course(courseId: String, title: String) = "courses/${encode(courseId)}?title=${encode(title)}"
+
+    private fun encode(value: String) = java.net.URLEncoder.encode(value, "UTF-8")
 
     fun domain(subject: SchoolSubject, domainCode: String) = "map/${subject.name}/$domainCode"
 
@@ -130,7 +154,7 @@ private fun MainScaffold(services: AppServices) {
         bottomBar = {
             NavigationBar {
                 for (tab in Tab.entries) {
-                    val selected = currentRoute?.destination?.hierarchy(tab.route) == true
+                    val selected = currentRoute?.destination?.belongsTo(tab) == true
 
                     NavigationBarItem(
                         selected = selected,
@@ -160,7 +184,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
     composable(Routes.HOME) {
         HomeScreen(
             services = services,
-            onOpenMap = { navController.switchTab(Routes.MAP) },
+            onOpenLearn = { navController.switchTab(Routes.LEARN) },
             onOpenSchools = { navController.switchTab(Routes.SCHOOLS) },
             onOpenGoals = { navController.navigate(Routes.GOALS) },
             onOpenElement = { subject, domain, element ->
@@ -178,11 +202,49 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         )
     }
 
+    composable(Routes.LEARN) {
+        LearnScreen(
+            content = services.content,
+            onOpenTests = { navController.navigate(Routes.TESTS) },
+            onOpenSubject = { navController.navigate(Routes.subject(it)) },
+            onOpenMap = { navController.navigate(Routes.MAP) },
+        )
+    }
+
+    composable(Routes.SUBJECT) { entry ->
+        SubjectScreen(
+            content = services.content,
+            subjectName = entry.arguments?.getString("subject").orEmpty(),
+            onOpenPath = { id, title -> navController.navigate(Routes.path(id, title)) },
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.PATH) { entry ->
+        PathScreen(
+            content = services.content,
+            pathId = entry.arguments?.getString("pathId").orEmpty(),
+            title = entry.arguments?.getString("title").orEmpty(),
+            onOpenCourse = { id, title -> navController.navigate(Routes.course(id, title)) },
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.COURSE) { entry ->
+        CourseScreen(
+            content = services.content,
+            courseId = entry.arguments?.getString("courseId").orEmpty(),
+            title = entry.arguments?.getString("title").orEmpty(),
+            onOpenLesson = { navController.navigate(Routes.lesson(it)) },
+            onBack = navController::popBackStack,
+        )
+    }
+
     composable(Routes.MAP) {
         UnderstandingMapScreen(
             mapState = services.understandingMap,
             onOpenDomain = { subject, domain -> navController.navigate(Routes.domain(subject, domain)) },
-            onOpenTests = { navController.navigate(Routes.TESTS) },
+            onBack = navController::popBackStack,
         )
     }
 
@@ -313,6 +375,8 @@ private fun NavHostController.switchTab(route: String) {
     }
 }
 
-/** True when [route] is this destination or one pushed from it. */
-private fun androidx.navigation.NavDestination.hierarchy(route: String): Boolean =
-    this.route == route || this.route?.startsWith("${route.substringBefore('/')}/") == true
+/** True when this destination is [tab] itself or a screen pushed from it. */
+private fun androidx.navigation.NavDestination.belongsTo(tab: Tab): Boolean {
+    val first = route?.substringBefore('/')?.substringBefore('?') ?: return false
+    return first == tab.route || first in tab.owns
+}

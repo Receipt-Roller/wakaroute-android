@@ -47,6 +47,21 @@ data class QuizAttempt(
     val completedAt: String? = null,
 )
 
+/**
+ * One path, as `GET /api/v1/organizations/{org}/paths` lists it.
+ *
+ * [labels] are the **only** way to tell which 教科 a path belongs to — 教科
+ * first, 領域 second, by convention. Never parse [name].
+ */
+@Serializable
+data class PathSummary(
+    val id: String,
+    val name: String = "",
+    val description: String? = null,
+    val labels: List<String> = emptyList(),
+    @Serializable(with = LenientInt::class) val courseCount: Int = 0,
+)
+
 /** `GET /api/v1/paths/{id}` — a 領域, with the courses that make it up. */
 @Serializable
 data class PathDetail(
