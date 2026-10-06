@@ -34,6 +34,7 @@ import com.wakaroute.app.feature.cards.CardsScreen
 import com.wakaroute.app.feature.documents.DocumentScreen
 import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
+import com.wakaroute.app.feature.journal.JournalScreen
 import com.wakaroute.app.feature.learn.CourseScreen
 import com.wakaroute.app.feature.learn.LearnScreen
 import com.wakaroute.app.feature.learn.LessonScreen
@@ -76,7 +77,7 @@ private enum class Tab(
         Icons.AutoMirrored.Filled.MenuBook,
         owns = listOf("subjects", "paths", "courses", "lessons", "tests", "map", "cards", "card-licenses"),
     ),
-    Record(Routes.RECORD, "記録", Icons.Filled.Timer),
+    Record(Routes.RECORD, "記録", Icons.Filled.Timer, owns = listOf("journal")),
     Schools(Routes.SCHOOLS, "高校を探す", Icons.Filled.School),
     More(Routes.MORE, "その他", Icons.Filled.MoreHoriz),
 }
@@ -89,6 +90,7 @@ object Routes {
     const val PATH = "paths/{pathId}?title={title}"
     const val COURSE = "courses/{courseId}?title={title}"
     const val MAP = "map"
+    const val JOURNAL = "journal"
     const val CARDS = "cards"
     const val CARD_DECK = "cards/{deck}"
     const val CARD_LICENSES = "card-licenses"
@@ -221,6 +223,14 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         )
     }
 
+    composable(Routes.JOURNAL) {
+        JournalScreen(
+            client = services.journal,
+            outbox = services.journalOutbox,
+            onBack = navController::popBackStack,
+        )
+    }
+
     composable(Routes.CARDS) {
         CardsScreen(
             cards = services.cards,
@@ -341,6 +351,7 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
 
     composable(Routes.RECORD) {
         StudyRecordScreen(
+            onOpenJournal = { navController.navigate(Routes.JOURNAL) },
             timer = services.studyTimer,
             queue = services.actionQueue,
             content = services.content,

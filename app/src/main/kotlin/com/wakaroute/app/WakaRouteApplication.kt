@@ -1,6 +1,9 @@
 package com.wakaroute.app
 
 import com.wakaroute.app.data.CardsState
+import com.wakaroute.core.journal.FileJournalOutboxStore
+import com.wakaroute.core.journal.JournalClient
+import com.wakaroute.core.journal.JournalOutbox
 import com.wakaroute.core.cards.CardCatalogClient
 import com.wakaroute.core.cards.CardLibrary
 import com.wakaroute.core.cards.FileCardProgressStore
@@ -107,6 +110,9 @@ class AppServices(
     val studyTimer: StudyTimer,
     val targetSchools: TargetSchoolsState,
     val cards: CardsState,
+    /** 受験日記. MANABU2 holds it; the outbox holds only what has not been sent. */
+    val journal: JournalClient,
+    val journalOutbox: JournalOutbox,
 ) {
     companion object {
         fun live(application: Application): AppServices {
@@ -121,6 +127,11 @@ class AppServices(
             )
             val authenticated = AuthenticatedHttpClient(http, auth)
             val content = ContentClient(authenticated, environment)
+            val journal = JournalClient(authenticated, environment)
+            val journalOutbox = JournalOutbox(
+                FileJournalOutboxStore(File(application.filesDir, "journal-outbox.json")),
+                journal,
+            )
             val cardsDirectory = File(application.filesDir, "cards")
             val cardProgress = FileCardProgressStore(File(cardsDirectory, "progress.json"))
 
@@ -161,8 +172,8 @@ class AppServices(
                 },
                 content = content,
                 actionQueue = queue,
-                handover = AccountHandover(auth, queue),
-                accountDeletion = AccountDeletion(auth, queue, cardProgress),
+                handover = AccountHandover(auth, queue, journalOutbox),
+                accountDeletion = AccountDeletion(auth, queue, cardProgress, journalOutbox),
                 studyTimer = StudyTimer(queue),
                 preferences = AppPreferences(application),
                 auth = auth,
@@ -173,6 +184,8 @@ class AppServices(
                 ),
                 // Unauthenticated, like the school catalogue: the card sets are
                 // on wakaroute.com and need no account.
+                journal = journal,
+                journalOutbox = journalOutbox,
                 cards = CardsState(
                     CardLibrary.onDisk(cardsDirectory, CardCatalogClient(http, environment), cardProgress),
                 ),

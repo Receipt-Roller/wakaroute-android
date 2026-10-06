@@ -1,5 +1,6 @@
 package com.wakaroute.app.feature.study
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakaroute.app.ui.design.AdaptiveRow
 import com.wakaroute.app.ui.design.ReadableColumn
+import androidx.compose.ui.semantics.semantics
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.StudyDay
 import com.wakaroute.core.content.StudyStreak
@@ -45,6 +47,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun StudyRecordScreen(
+    onOpenJournal: () -> Unit,
     timer: StudyTimer,
     queue: LearningActionQueue,
     content: ContentClient,
@@ -101,6 +104,8 @@ fun StudyRecordScreen(
                 },
             )
 
+            JournalCard(onOpenJournal)
+
             streak?.let { StreakRow(it) }
 
             days?.let { History(it) }
@@ -123,6 +128,30 @@ fun StudyRecordScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+/**
+ * The way into 受験日記. A card here rather than a tab: the diary is about the
+ * same day the timer is, and splitting them would answer 「きょう何をした？」 in
+ * two places. The same choice as iOS.
+ */
+@Composable
+private fun JournalCard(onClick: () -> Unit) {
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {},
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("受験日記", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "できたこと、困ったこと、明日やること",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

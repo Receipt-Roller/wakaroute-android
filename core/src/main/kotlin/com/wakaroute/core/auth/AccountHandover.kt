@@ -1,5 +1,6 @@
 package com.wakaroute.core.auth
 
+import com.wakaroute.core.journal.JournalOutbox
 import com.wakaroute.core.offline.LearningActionQueue
 
 /**
@@ -22,6 +23,8 @@ import com.wakaroute.core.offline.LearningActionQueue
 class AccountHandover(
     private val auth: AuthSession,
     private val queue: LearningActionQueue,
+    /** Unsent diary and time blocks belong to the account being left, like the queue. */
+    private val journal: JournalOutbox? = null,
 ) {
     /**
      * Why a sign-in was refused.
@@ -59,8 +62,9 @@ class AccountHandover(
     ): SignInResult {
         if (!discardingUnsentWork) {
             runCatching { queue.flush() }
+            runCatching { journal?.flush() }
 
-            val stillPending = queue.pending().size
+            val stillPending = queue.pending().size + (journal?.pending()?.size ?: 0)
             if (stillPending > 0) return SignInResult.Refused(UnsentWork(stillPending))
         }
 
@@ -69,6 +73,7 @@ class AccountHandover(
         // Whatever is left belongs to the account this install just left.
         // Sending it now would file one student's work under another's name.
         queue.clear()
+        journal?.clear()
 
         return SignInResult.SignedIn(session.userId)
     }

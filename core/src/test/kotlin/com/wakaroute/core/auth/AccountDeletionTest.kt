@@ -3,6 +3,11 @@ package com.wakaroute.core.auth
 import com.wakaroute.core.cards.CardProgress
 import com.wakaroute.core.cards.CardReview
 import com.wakaroute.core.cards.InMemoryCardProgressStore
+import com.wakaroute.core.journal.DiaryDraft
+import com.wakaroute.core.journal.InMemoryJournalOutboxStore
+import com.wakaroute.core.journal.JournalClient
+import com.wakaroute.core.journal.JournalDates
+import com.wakaroute.core.journal.JournalOutbox
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.net.ApiError
@@ -89,6 +94,19 @@ class AccountDeletionTest {
         val cleared = InMemoryCardProgressStore(answered)
         AccountDeletion(ScriptedAuth().session, queue(), cleared).delete()
         assertEquals(CardProgress(), cleared.read())
+    }
+
+    @Test
+    fun `unsent diary writes go with the account`() = runTest {
+        val journal = JournalOutbox(
+            InMemoryJournalOutboxStore(),
+            JournalClient(OfflineContent, AppEnvironment.Production),
+        )
+        journal.queueDiary(DiaryDraft(achievements = "書いた"), JournalDates.today())
+
+        AccountDeletion(ScriptedAuth().session, queue(), journal = journal).delete()
+
+        assertTrue(journal.pending().isEmpty())
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.wakaroute.core.auth
 
 import com.wakaroute.core.cards.CardProgressStore
 import com.wakaroute.core.cards.InMemoryCardProgressStore
+import com.wakaroute.core.journal.JournalOutbox
 import com.wakaroute.core.net.ApiError
 import com.wakaroute.core.offline.LearningActionQueue
 
@@ -24,6 +25,8 @@ class AccountDeletion(
     private val queue: LearningActionQueue,
     /** Card progress lives only on the device, so only the device can forget it. */
     private val cardProgress: CardProgressStore = InMemoryCardProgressStore(),
+    /** Unsent diary and time blocks — the same reason as the queue. */
+    private val journal: JournalOutbox? = null,
 ) {
     sealed interface Result {
         /** Gone. The next launch starts a new, empty learner. */
@@ -51,6 +54,7 @@ class AccountDeletion(
         // failed delete must leave the records intact, because the account
         // they belong to still exists.
         queue.clear()
+        journal?.clear()
         cardProgress.clear()
 
         Result.Deleted

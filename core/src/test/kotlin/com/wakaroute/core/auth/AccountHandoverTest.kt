@@ -1,5 +1,10 @@
 package com.wakaroute.core.auth
 
+import com.wakaroute.core.journal.DiaryDraft
+import com.wakaroute.core.journal.InMemoryJournalOutboxStore
+import com.wakaroute.core.journal.JournalClient
+import com.wakaroute.core.journal.JournalDates
+import com.wakaroute.core.journal.JournalOutbox
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.content.QuizAnswer
@@ -61,6 +66,21 @@ class AccountHandoverTest {
         val result = AccountHandover(ScriptedAuth().session, queue).signIn("a@example.invalid", "pw")
 
         assertEquals(2, (result as AccountHandover.SignInResult.Refused).unsent.pendingRecords)
+    }
+
+    @Test
+    fun `an unsent diary counts as unsent work, and is not carried into the new account`() = runTest {
+        // Written on a train and still waiting. Signing in as somebody else
+        // would send it under their name.
+        val journal = offlineJournal()
+        journal.queueDiary(DiaryDraft(achievements = "書いた"), JournalDates.today())
+
+        val refused = AccountHandover(ScriptedAuth().session, queue(FakeApi()), journal).signIn("a@example.invalid", "pw")
+        assertEquals(AccountHandover.SignInResult.Refused(AccountHandover.UnsentWork(1)), refused)
+
+        AccountHandover(ScriptedAuth().session, queue(FakeApi()), journal)
+            .signIn("a@example.invalid", "pw", discardingUnsentWork = true)
+        assertTrue(journal.pending().isEmpty())
     }
 
     @Test
@@ -174,6 +194,16 @@ class AccountHandoverTest {
     }
 
     // --- helpers -----------------------------------------------------------
+
+    private fun offlineJournal() = JournalOutbox(
+        InMemoryJournalOutboxStore(),
+        JournalClient(
+            object : com.wakaroute.core.net.HttpClient {
+                override suspend fun send(request: com.wakaroute.core.net.HttpRequest) = throw ApiError.Offline
+            },
+            com.wakaroute.core.config.AppEnvironment.Production,
+        ),
+    )
 
     private fun queue(api: FakeApi) = LearningActionQueue(
         store = InMemoryPendingActionStore(),
