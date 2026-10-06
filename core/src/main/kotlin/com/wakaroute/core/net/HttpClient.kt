@@ -24,7 +24,12 @@ data class HttpRequest(
     enum class Method { GET, POST, PUT, DELETE }
 }
 
-data class HttpResponse(val status: Int, val body: String)
+/** [headers] are keyed in lower case — HTTP header names are case-insensitive. */
+data class HttpResponse(
+    val status: Int,
+    val body: String,
+    val headers: Map<String, String> = emptyMap(),
+)
 
 /**
  * The seam between our code and the network, so repositories and their rules
@@ -66,7 +71,8 @@ class OkHttpHttpClient private constructor(
         enqueue(object : Callback {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    continuation.resume(HttpResponse(it.code, it.body?.string().orEmpty()))
+                    val headers = it.headers.names().associate { name -> name.lowercase() to it.header(name).orEmpty() }
+                    continuation.resume(HttpResponse(it.code, it.body?.string().orEmpty(), headers))
                 }
             }
 

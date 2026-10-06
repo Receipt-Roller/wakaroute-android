@@ -1,5 +1,8 @@
 package com.wakaroute.core.auth
 
+import com.wakaroute.core.cards.CardProgress
+import com.wakaroute.core.cards.CardReview
+import com.wakaroute.core.cards.InMemoryCardProgressStore
 import com.wakaroute.core.config.AppEnvironment
 import com.wakaroute.core.content.ContentClient
 import com.wakaroute.core.net.ApiError
@@ -72,6 +75,20 @@ class AccountDeletionTest {
         AccountDeletion(ScriptedAuth().session, queue).delete()
 
         assertTrue(queue.pending().isEmpty())
+    }
+
+    @Test
+    fun `card progress is forgotten only once the server has deleted`() = runTest {
+        // It lives only on this device, so nothing else will ever clear it.
+        val answered = CardProgress(mapOf("kanji-1" to CardReview(box = 2, reviewedOnEpochDay = 20_000)))
+
+        val kept = InMemoryCardProgressStore(answered)
+        AccountDeletion(ScriptedAuth(deleteFails = ApiError.Offline).session, queue(), kept).delete()
+        assertEquals(answered, kept.read())
+
+        val cleared = InMemoryCardProgressStore(answered)
+        AccountDeletion(ScriptedAuth().session, queue(), cleared).delete()
+        assertEquals(CardProgress(), cleared.read())
     }
 
     @Test

@@ -63,6 +63,7 @@ import java.net.URLDecoder
 fun LearnScreen(
     content: ContentClient,
     onOpenTests: () -> Unit,
+    onOpenCards: () -> Unit,
     onOpenSubject: (SchoolSubject) -> Unit,
     onOpenMap: () -> Unit,
 ) {
@@ -76,6 +77,13 @@ fun LearnScreen(
             Text(text = "学ぶ", style = MaterialTheme.typography.headlineSmall)
 
             TestsEntryCard(onOpenTests)
+
+            // iOS's wording, word for word: 共通判断規則 「言葉は揃える」.
+            NavigationRow(
+                title = "5教科のカード",
+                detail = "漢字・単語・数学・理科・社会。電波がなくても使えます",
+                onClick = onOpenCards,
+            )
 
             Loading(key = Unit, load = { SubjectCatalog.group(content.paths()) }) { subjects ->
                 Column {

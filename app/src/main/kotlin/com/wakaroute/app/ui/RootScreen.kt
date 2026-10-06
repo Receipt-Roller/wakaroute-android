@@ -27,6 +27,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.wakaroute.app.AppServices
+import com.wakaroute.app.data.Deck
+import com.wakaroute.app.feature.cards.CardLicenseScreen
+import com.wakaroute.app.feature.cards.CardStudyScreen
+import com.wakaroute.app.feature.cards.CardsScreen
 import com.wakaroute.app.feature.documents.DocumentScreen
 import com.wakaroute.app.feature.goals.TargetSchoolsScreen
 import com.wakaroute.app.feature.home.HomeScreen
@@ -70,7 +74,7 @@ private enum class Tab(
         Routes.LEARN,
         "学ぶ",
         Icons.AutoMirrored.Filled.MenuBook,
-        owns = listOf("subjects", "paths", "courses", "lessons", "tests", "map"),
+        owns = listOf("subjects", "paths", "courses", "lessons", "tests", "map", "cards", "card-licenses"),
     ),
     Record(Routes.RECORD, "記録", Icons.Filled.Timer),
     Schools(Routes.SCHOOLS, "高校を探す", Icons.Filled.School),
@@ -85,6 +89,9 @@ object Routes {
     const val PATH = "paths/{pathId}?title={title}"
     const val COURSE = "courses/{courseId}?title={title}"
     const val MAP = "map"
+    const val CARDS = "cards"
+    const val CARD_DECK = "cards/{deck}"
+    const val CARD_LICENSES = "card-licenses"
     const val RECORD = "record"
     const val SCHOOLS = "schools"
     const val MORE = "more"
@@ -99,6 +106,8 @@ object Routes {
     const val ELEMENT = "map/{subject}/{domain}/{element}"
     const val SCHOOL_DETAIL = "schools/{schoolId}"
     const val DOCUMENT = "documents/{document}"
+
+    fun cardDeck(deck: Deck) = "cards/${deck.name}"
 
     fun subject(subject: SchoolSubject) = "subjects/${subject.name}"
 
@@ -206,9 +215,31 @@ private fun NavGraphBuilder.appGraph(services: AppServices, navController: NavHo
         LearnScreen(
             content = services.content,
             onOpenTests = { navController.navigate(Routes.TESTS) },
+            onOpenCards = { navController.navigate(Routes.CARDS) },
             onOpenSubject = { navController.navigate(Routes.subject(it)) },
             onOpenMap = { navController.navigate(Routes.MAP) },
         )
+    }
+
+    composable(Routes.CARDS) {
+        CardsScreen(
+            cards = services.cards,
+            onOpenDeck = { navController.navigate(Routes.cardDeck(it)) },
+            onOpenLicenses = { navController.navigate(Routes.CARD_LICENSES) },
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.CARD_DECK) { entry ->
+        CardStudyScreen(
+            cards = services.cards,
+            deckName = entry.arguments?.getString("deck").orEmpty(),
+            onBack = navController::popBackStack,
+        )
+    }
+
+    composable(Routes.CARD_LICENSES) {
+        CardLicenseScreen(cards = services.cards, onBack = navController::popBackStack)
     }
 
     composable(Routes.SUBJECT) { entry ->

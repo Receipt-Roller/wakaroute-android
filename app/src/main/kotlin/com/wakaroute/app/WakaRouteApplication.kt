@@ -1,5 +1,9 @@
 package com.wakaroute.app
 
+import com.wakaroute.app.data.CardsState
+import com.wakaroute.core.cards.CardCatalogClient
+import com.wakaroute.core.cards.CardLibrary
+import com.wakaroute.core.cards.FileCardProgressStore
 import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +106,7 @@ class AppServices(
     val accountDeletion: AccountDeletion,
     val studyTimer: StudyTimer,
     val targetSchools: TargetSchoolsState,
+    val cards: CardsState,
 ) {
     companion object {
         fun live(application: Application): AppServices {
@@ -116,6 +121,9 @@ class AppServices(
             )
             val authenticated = AuthenticatedHttpClient(http, auth)
             val content = ContentClient(authenticated, environment)
+            val cardsDirectory = File(application.filesDir, "cards")
+            val cardProgress = FileCardProgressStore(File(cardsDirectory, "progress.json"))
+
             val queue = LearningActionQueue(
                 // Losing this file costs the records waiting in it, not the
                 // feature — so it lives in filesDir rather than cache, which
@@ -154,7 +162,7 @@ class AppServices(
                 content = content,
                 actionQueue = queue,
                 handover = AccountHandover(auth, queue),
-                accountDeletion = AccountDeletion(auth, queue),
+                accountDeletion = AccountDeletion(auth, queue, cardProgress),
                 studyTimer = StudyTimer(queue),
                 preferences = AppPreferences(application),
                 auth = auth,
@@ -162,6 +170,11 @@ class AppServices(
                 profile = ProfileClient(authenticated, environment),
                 targetSchools = TargetSchoolsState(
                     repository = HttpTargetSchoolsRepository(authenticated, environment),
+                ),
+                // Unauthenticated, like the school catalogue: the card sets are
+                // on wakaroute.com and need no account.
+                cards = CardsState(
+                    CardLibrary.onDisk(cardsDirectory, CardCatalogClient(http, environment), cardProgress),
                 ),
             )
         }
